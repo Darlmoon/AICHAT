@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>발췌기</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&family=Nanum+Myeongjo:wght@400;700;800&family=Noto+Sans+KR:wght@300;400;500;700&family=Noto+Serif+KR:wght@400;500;700&family=Gowun+Dodum&family=Gowun+Batang:wght@400;700&family=Gaegu:wght@400;700&family=Nanum+Pen+Script&family=Hahmlet:wght@400;500;700&family=IBM+Plex+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fafafa; --panel:#ffffff; --panel-2:#f5f5f6; --line:#e8e8ea;
+  --ink:#1c1c1e; --ink-soft:#6e6e76; --ink-faint:#a6a6ad;
+  --accent:#7c83ff; --accent-soft:#c6c9ff; --accent-bg:#eef0ff;
+  --field-bg:#ffffff; --field-line:#e2e2e6;
+  --shadow:0 1px 2px rgba(0,0,0,.04), 0 10px 30px rgba(0,0,0,.06);
+  --r:11px; --r-sm:8px;
+}
+.ui-dark{
+  --bg:#141416; --panel:#1d1d20; --panel-2:#222226; --line:#2e2e33;
+  --ink:#ededf0; --ink-soft:#a0a0a8; --ink-faint:#67676e;
+  --accent:#9aa0ff; --accent-soft:#4a4d70; --accent-bg:#26273a;
+  --field-bg:#202024; --field-line:#34343a;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:'Noto Sans KR',-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--ink);display:flex;height:100vh;height:100dvh;overflow:hidden;transition:background .25s,color .25s;font-size:14px}
+.sidebar{width:348px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;height:100%}
+.side-head{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+.brand{font-size:15px;font-weight:700;letter-spacing:-.02em;display:flex;align-items:center;gap:9px}
+.brand .dot{width:9px;height:9px;border-radius:50%;background:var(--accent)}
+.side-scroll{flex:1;overflow-y:auto;padding:4px 0 60px;-webkit-overflow-scrolling:touch}
+.side-scroll::-webkit-scrollbar{width:8px}
+.side-scroll::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px}
+.sec{border-bottom:1px solid var(--line)}
+.sec-head{width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:14px 20px;font-size:12.5px;font-weight:700;color:var(--ink);display:flex;align-items:center;justify-content:space-between;font-family:inherit}
+.sec-head:hover{background:var(--panel-2)}
+.sec-head .chev{font-size:10px;transition:transform .2s;color:var(--ink-faint)}
+.sec.closed .chev{transform:rotate(-90deg)}
+.sec-body{padding:2px 20px 18px}
+.sec.closed .sec-body{display:none}
+label.f{display:block;font-size:11px;color:var(--ink-faint);margin:13px 0 6px;font-weight:500}
+label.f:first-child{margin-top:4px}
+textarea,input[type=text],select{width:100%;background:var(--field-bg);color:var(--ink);border:1px solid var(--field-line);border-radius:var(--r-sm);padding:10px;font-family:inherit;font-size:13px;resize:vertical;transition:border-color .15s}
+select{min-height:40px}
+textarea:focus,input[type=text]:focus,select:focus{outline:none;border-color:var(--accent)}
+textarea#src{min-height:150px;line-height:1.6;font-size:12.5px}
+textarea#note-input{min-height:54px}
+.slider-row{display:flex;align-items:center;gap:8px;margin:13px 0}
+.slider-row label{flex:0 0 56px;font-size:11px;color:var(--ink-faint);margin:0;font-weight:500}
+.slider-row .val{flex:0 0 40px;text-align:right;font-size:11px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+.slider-row .rst{flex:0 0 24px;width:24px;height:24px;border:1px solid var(--field-line);border-radius:6px;background:var(--field-bg);color:var(--ink-faint);cursor:pointer;font-size:12px;display:inline-flex;align-items:center;justify-content:center;padding:0}
+.slider-row .rst:hover{border-color:var(--accent-soft);color:var(--accent)}
+input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:4px;border-radius:4px;background:var(--field-line);cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:20px;height:20px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--panel)}
+input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--panel)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{padding:8px 13px;border:1px solid var(--field-line);border-radius:18px;background:var(--field-bg);color:var(--ink-soft);cursor:pointer;font-size:12px;font-family:inherit;transition:all .15s}
+.chip:hover{border-color:var(--accent-soft)}
+.chip.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn{padding:11px 12px;border:1px solid var(--field-line);border-radius:var(--r-sm);background:var(--field-bg);color:var(--ink);cursor:pointer;font-size:12.5px;font-family:inherit;transition:all .15s;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px}
+.btn:hover{border-color:var(--accent-soft);background:var(--panel-2)}
+.btn.full{width:100%}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
+.btn.primary:hover{filter:brightness(1.06);background:var(--accent)}
+.btn.on{background:var(--accent-bg);border-color:var(--accent);color:var(--accent);font-weight:600}
+.seg{display:flex;border:1px solid var(--field-line);border-radius:var(--r-sm);overflow:hidden}
+.seg button{flex:1;border:none;background:var(--field-bg);color:var(--ink-soft);padding:11px 0;cursor:pointer;font-size:15px;font-family:inherit;border-right:1px solid var(--field-line);transition:.15s;min-height:42px}
+.seg button:last-child{border-right:none}
+.seg button:hover{background:var(--panel-2)}
+.seg button.on{background:var(--accent);color:#fff}
+.color-row{display:flex;align-items:center;gap:9px;margin:11px 0}
+.color-row label{flex:1;font-size:12px;color:var(--ink-soft);margin:0}
+.swatch-btn{width:36px;height:30px;border-radius:7px;border:1px solid var(--field-line);cursor:pointer;flex-shrink:0;position:relative}
+.swatch-btn:after{content:'';position:absolute;inset:0;border-radius:6px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;margin:13px 0}
+.toggle-row span{font-size:12.5px;color:var(--ink-soft)}
+.sw{position:relative;width:44px;height:26px;flex-shrink:0}
+.sw input{opacity:0;width:0;height:0}
+.sw .track{position:absolute;inset:0;background:var(--field-line);border-radius:26px;transition:.2s;cursor:pointer}
+.sw .track:before{content:"";position:absolute;width:20px;height:20px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+.sw input:checked + .track{background:var(--accent)}
+.sw input:checked + .track:before{transform:translateX(18px)}
+.hint{font-size:11px;color:var(--ink-faint);line-height:1.55;margin-top:8px}
+.hint code{background:var(--panel-2);padding:1px 5px;border-radius:4px;font-size:10.5px;border:1px solid var(--line)}
+.pop-mask{position:fixed;inset:0;z-index:200;display:none}
+.pop-mask.on{display:block}
+.popover{position:absolute;width:280px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:13px;z-index:201}
+.pal-grid{display:grid;grid-template-columns:repeat(10,1fr);gap:4px}
+.pal-grid .sw{width:auto;height:20px;border-radius:4px;border:1px solid rgba(0,0,0,.08);cursor:pointer;transition:transform .1s}
+.pal-grid .sw:hover{transform:scale(1.18);z-index:2}
+.pal-grid .sw.sel{box-shadow:0 0 0 2px var(--accent),0 0 0 4px var(--panel)}
+.pal-lbl{font-size:10.5px;color:var(--ink-faint);margin:11px 0 5px;font-weight:600;letter-spacing:.03em;text-transform:uppercase}
+.recent-row{display:flex;gap:5px;flex-wrap:wrap}
+.recent-row .sw{width:24px;height:24px;border-radius:5px;border:1px solid rgba(0,0,0,.08);cursor:pointer;flex-shrink:0}
+.recent-row .empty{font-size:10.5px;color:var(--ink-faint);padding:4px 0}
+.hex-row{display:flex;align-items:center;gap:6px;margin-top:11px}
+.hex-row input[type=text]{flex:1;font-size:12px;text-transform:uppercase;padding:8px}
+.hex-row .native{width:36px;height:38px;padding:0;border:1px solid var(--field-line);border-radius:6px;background:none;cursor:pointer;flex-shrink:0}
+.rgb-row{display:flex;gap:6px;margin-top:7px}
+.rgb-row .fld{flex:1;display:flex;flex-direction:column;align-items:center}
+.rgb-row .fld span{font-size:10px;color:var(--ink-faint);margin-bottom:2px}
+.rgb-row .fld input{width:100%;text-align:center;padding:6px 2px;font-size:12px}
+.pop-preview{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.pop-preview .big{width:34px;height:34px;border-radius:7px;border:1px solid rgba(0,0,0,.1)}
+.pop-preview b{font-size:13px}
+.stage-wrap{flex:1;display:flex;flex-direction:column;height:100%;min-width:0}
+.topbar{height:56px;flex-shrink:0;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;padding:0 16px;background:var(--panel)}
+.topbar .spacer{flex:1}
+.zoom-ctl{display:flex;align-items:center;gap:7px;color:var(--ink-soft);font-size:12px}
+.zoom-ctl button{width:30px;height:30px;border:1px solid var(--field-line);border-radius:6px;background:var(--field-bg);color:var(--ink);cursor:pointer;font-size:13px;display:inline-flex;align-items:center;justify-content:center}
+.zoom-ctl button:hover{border-color:var(--accent-soft);background:var(--panel-2)}
+.theme-pills{display:flex;border:1px solid var(--field-line);border-radius:7px;overflow:hidden}
+.theme-pills button{border:none;background:var(--field-bg);color:var(--ink-soft);padding:8px 12px;cursor:pointer;font-size:12px;font-family:inherit;border-right:1px solid var(--field-line)}
+.theme-pills button:last-child{border-right:none}
+.theme-pills button.on{background:var(--accent);color:#fff}
+.stage{flex:1;overflow:auto;display:flex;align-items:flex-start;justify-content:center;padding:40px;background:var(--bg);background-image:radial-gradient(var(--line) 1px,transparent 1px);background-size:22px 22px;-webkit-overflow-scrolling:touch}
+.canvas-outer{transform-origin:top center;transition:transform .12s}
+#canvas{position:relative;overflow:hidden;background:#fff;box-shadow:var(--shadow)}
+#canvas .bg-layer{position:absolute;inset:0;overflow:hidden}
+#canvas .bg-layer img{position:absolute;top:50%;left:50%;transform-origin:center;max-width:none;user-select:none;-webkit-user-drag:none}
+.sel-box{position:absolute;border:1.5px dashed var(--accent);display:none;z-index:30;pointer-events:none}
+.sel-box.on{display:block}
+.sel-box .h{position:absolute;width:16px;height:16px;background:#fff;border:1.5px solid var(--accent);border-radius:4px;pointer-events:auto}
+.sel-box .h.tl{left:-8px;top:-8px;cursor:nwse-resize}
+.sel-box .h.tr{right:-8px;top:-8px;cursor:nesw-resize}
+.sel-box .h.bl{left:-8px;bottom:-8px;cursor:nesw-resize}
+.sel-box .h.br{right:-8px;bottom:-8px;cursor:nwse-resize}
+.sel-box .mv{position:absolute;inset:0;pointer-events:auto;cursor:move}
+.sel-box .tag{position:absolute;left:50%;top:-22px;transform:translateX(-50%);background:var(--accent);color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;white-space:nowrap;pointer-events:none}
+#canvas.bg-edit .content{pointer-events:none}
+#canvas.bg-edit .bg-layer{z-index:25}
+#canvas.bg-edit .bg-layer img{cursor:grab}
+#canvas .content{position:relative;z-index:2;height:100%;overflow:hidden}
+.text-flow{position:absolute;left:0;right:0;padding:var(--pad,40px);white-space:pre-wrap;word-break:break-word}
+.text-flow.v-top{top:0}
+.text-flow.v-mid{top:50%;transform:translateY(-50%)}
+.text-flow.v-bot{bottom:0}
+.text-flow p{margin:0 0 1em}
+.text-flow p:last-child{margin-bottom:0}
+.narr-italic .m-narr{font-style:italic}
+.note{position:absolute;z-index:6;min-width:70px;max-width:300px;padding:8px 11px;border-radius:8px;font-family:'Nanum Gothic',sans-serif;font-size:13px;line-height:1.5}
+.note.bg-on{box-shadow:0 2px 12px rgba(0,0,0,.14)}
+.note .body{outline:none;min-height:1em;cursor:text}
+.note .del{position:absolute;top:-10px;right:-10px;width:22px;height:22px;border-radius:50%;background:#ef5350;color:#fff;border:2px solid #fff;cursor:pointer;font-size:13px;display:none;align-items:center;justify-content:center;line-height:1;z-index:8}
+.note.sel .del{display:flex}
+.note.sel{outline:1.5px dashed var(--accent);outline-offset:3px}
+.no-ui .sel-box{display:none !important}
+.no-ui .note.sel{outline:none}
+.no-ui .note .del{display:none !important}
+.empty-tip{color:var(--ink-faint);font-size:13px;text-align:center;padding:30px 20px;line-height:1.7}
+/* floating format toolbar */
+.fmt-bar{position:fixed;z-index:300;display:none;align-items:center;gap:3px;background:var(--panel);border:1px solid var(--line);border-radius:9px;box-shadow:var(--shadow);padding:4px}
+.fmt-bar.on{display:flex}
+.fmt-bar button{width:30px;height:30px;border:none;background:none;color:var(--ink);cursor:pointer;font-size:14px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center}
+.fmt-bar button:hover{background:var(--panel-2)}
+.fmt-bar b{font-weight:800}.fmt-bar i{font-style:italic}.fmt-bar u{text-decoration:underline}
+.fmt-bar .sep{width:1px;height:20px;background:var(--line);margin:0 2px}
+.fmt-bar .hlsw{width:18px;height:18px;border-radius:4px;border:1px solid rgba(0,0,0,.15)}
+.hl-mark{border-radius:0}
+.mini-pal{position:fixed;z-index:310;display:none;background:var(--panel);border:1px solid var(--line);border-radius:9px;box-shadow:var(--shadow);padding:8px;width:182px}
+.mini-pal.on{display:block}
+.mini-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:4px}
+.mini-grid .sw{width:auto;height:18px;border-radius:4px;border:1px solid rgba(0,0,0,.1);cursor:pointer}
+.mini-grid .sw:hover{transform:scale(1.15)}
+.mini-lbl{font-size:9.5px;color:var(--ink-faint);margin:7px 0 4px;font-weight:600;letter-spacing:.03em;text-transform:uppercase}
+.mini-recent{display:flex;gap:4px;flex-wrap:wrap;min-height:20px}
+.mini-recent .sw{width:20px;height:20px;border-radius:4px;border:1px solid rgba(0,0,0,.1);cursor:pointer}
+.mini-recent .empty{font-size:9.5px;color:var(--ink-faint)}
+.mini-more{display:flex;align-items:center;gap:6px;margin-top:8px;border-top:1px solid var(--line);padding-top:8px}
+.mini-more input[type=text]{flex:1;font-size:11px;text-transform:uppercase;padding:6px 7px}
+.mini-more input[type=color]{width:30px;height:30px;padding:0;border:1px solid var(--field-line);border-radius:6px;background:none;cursor:pointer;flex-shrink:0}
+.mobile-tabbar{display:none}
+.sheet-grip{display:none}
+@media (max-width:860px){
+  body{flex-direction:column}
+  .sidebar{position:fixed;left:0;right:0;bottom:0;width:100%;height:64vh;max-height:64vh;z-index:120;border-right:none;border-top:1px solid var(--line);border-radius:18px 18px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.16);transform:translateY(100%);transition:transform .28s cubic-bezier(.4,0,.2,1)}
+  .sidebar.open{transform:translateY(0)}
+  .sheet-grip{display:block;width:100%;padding:12px 0 6px;cursor:grab;touch-action:none}
+  .sheet-grip:before{content:'';display:block;width:44px;height:5px;border-radius:5px;background:var(--ink-faint);margin:0 auto;opacity:.5}
+  .sheet-close{display:flex !important}
+  .side-head{padding:4px 20px 12px}
+  .stage-wrap{height:100%}
+  .stage{padding:16px 16px 76px}
+  .topbar{padding:0 12px;gap:8px}
+  .mobile-tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:110;background:var(--panel);border-top:1px solid var(--line);padding:5px 6px calc(5px + env(safe-area-inset-bottom))}
+  .mobile-tabbar button{flex:1;border:none;background:none;color:var(--ink-soft);font-family:inherit;font-size:10px;cursor:pointer;padding:6px 2px;display:flex;flex-direction:column;align-items:center;gap:3px}
+  .mobile-tabbar button .ic{font-size:17px}
+  .mobile-tabbar button.active{color:var(--accent)}
+}
+@media (min-width:861px){.mobile-only{display:none !important}}
+</style>
+</head>
+<body>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sheet-grip" id="grip"></div>
+  <div class="side-head">
+    <div class="brand"><span class="dot"></span>발췌기</div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="toggle-row" style="margin:0;gap:8px"><span style="font-size:12px">UI 다크</span><label class="sw"><input type="checkbox" id="uiDark"><span class="track"></span></label></div>
+      <button class="sheet-close mobile-only" id="sheetClose" style="display:none;width:32px;height:32px;border:1px solid var(--field-line);border-radius:8px;background:var(--field-bg);color:var(--ink);font-size:16px;cursor:pointer;align-items:center;justify-content:center">✕</button>
+    </div>
+  </div>
+  <div class="side-scroll" id="sideScroll">
+
+    <div class="sec" data-panel="text">
+      <button class="sec-head" data-sec>본문 텍스트 <span class="chev">▾</span></button>
+      <div class="sec-body">
+        <label class="f">형광펜 색 (파스텔 · 뮤트)</label><div class="chips" id="hlChips"></div>
+        <div class="color-row" style="margin-top:7px"><label>형광펜 직접 조정</label><button class="swatch-btn" id="sw-hl"></button></div>
+        <div class="slider-row"><label>형광펜 투명도</label><input type="range" id="hlOpac" min="10" max="100" value="60"><span class="val" id="hlOpacV">60%</span><button class="rst" data-rst="hlOpac">↺</button></div>
+        <label class="f">마크업 입력</label><textarea id="src" spellcheck="false"></textarea>
+        <div class="hint"><code>*지문*</code> · <code>"대사"</code> · <code>@원문</code>+다음줄<code>=번역</code><br>본문/주석에서 글자를 드래그하면 서식 팝업이 뜹니다.</div>
+      </div>
+    </div>
+
+    <div class="sec" data-panel="align">
+      <button class="sec-head" data-sec>정렬 <span class="chev">▾</span></button>
+      <div class="sec-body">
+        <label class="f">텍스트 블록 세로 위치</label>
+        <div class="seg" id="vAlign"><button data-v="top">⤒</button><button data-v="mid" class="on">⇕</button><button data-v="bot">⤓</button></div>
+        <label class="f">가로 정렬 (전체 / 드래그 선택)</label>
+        <div class="seg" id="hAlign"><button data-a="left" class="on">⇤</button><button data-a="center">≡</button><button data-a="right">⇥</button><button data-a="justify">⇹</button></div>
+        <div class="hint">텍스트를 드래그한 뒤 가로 정렬을 누르면 그 문단만, 선택 없이 누르면 전체 적용.</div>
+      </div>
+    </div>
+
+    <div class="sec" data-panel="style">
+      <button class="sec-head" data-sec>색상 & 글씨체 <span class="chev">▾</span></button>
+      <div class="sec-body">
+        <div class="color-row"><label>대사 색상</label><button class="swatch-btn" id="sw-cDia"></button></div>
+        <div class="color-row"><label>지문 색상</label><button class="swatch-btn" id="sw-cNarr"></button></div>
+        <div class="color-row"><label>번역 색상</label><button class="swatch-btn" id="sw-cTrans"></button></div>
+        <div class="toggle-row"><span>지문 이탤릭체</span><label class="sw"><input type="checkbox" id="narrItalic"><span class="track"></span></label></div>
+        <div class="toggle-row"><span>대사 따옴표 표시</span><label class="sw"><input type="checkbox" id="showQuotes"><span class="track"></span></label></div>
+        <label class="f">본문 글씨체</label><select id="font"></select>
+        <div class="slider-row"><label>글자 크기</label><input type="range" id="fSize" min="8" max="24" value="11"><span class="val" id="fSizeV">11</span><button class="rst" data-rst="fSize">↺</button></div>
+        <div class="slider-row"><label>행간</label><input type="range" id="lh" min="120" max="280" value="180"><span class="val" id="lhV">1.80</span><button class="rst" data-rst="lh">↺</button></div>
+        <div class="slider-row"><label>자간</label><input type="range" id="ls" min="-30" max="80" value="0"><span class="val" id="lsV">0</span><button class="rst" data-rst="ls">↺</button></div>
+        <div class="slider-row"><label>여백</label><input type="range" id="pad" min="12" max="100" value="40"><span class="val" id="padV">40</span><button class="rst" data-rst="pad">↺</button></div>
+      </div>
+    </div>
+
+    <div class="sec" data-panel="bg">
+      <button class="sec-head" data-sec>배경 이미지 <span class="chev">▾</span></button>
+      <div class="sec-body">
+        <button class="btn full" id="pickImg">＋ 이미지 불러오기</button>
+        <button class="btn full" id="bgEditToggle" style="margin-top:8px">✥ 이미지 편집 모드</button>
+        <div class="hint" style="margin-top:6px">편집 모드를 켜면 텍스트가 잠시 통과되어 이미지를 자유롭게 드래그·확대할 수 있어요.</div>
+        <input type="file" id="imgFile" accept="image/*" hidden>
+        <div class="row" style="display:flex;gap:6px;margin-top:8px"><button class="btn" style="flex:1" id="bgFit">화면 채우기</button><button class="btn" style="flex:1" id="bgCenter">가운데</button></div>
+        <div class="slider-row"><label>크기</label><input type="range" id="bgScale" min="20" max="400" value="100"><span class="val" id="bgScaleV">100%</span><button class="rst" data-rst="bgScale">↺</button></div>
+        <div class="slider-row"><label>불투명도</label><input type="range" id="bgOpac" min="0" max="100" value="60"><span class="val" id="bgOpacV">60%</span><button class="rst" data-rst="bgOpac">↺</button></div>
+        <div class="color-row"><label>판 배경색</label><button class="swatch-btn" id="sw-board"></button></div>
+      </div>
+    </div>
+
+    <div class="sec" data-panel="ratio">
+      <button class="sec-head" data-sec>비율 & 크기 <span class="chev">▾</span></button>
+      <div class="sec-body">
+        <label class="f">비율</label>
+        <div class="chips" id="ratioChips"><button class="chip" data-r="1:1">1:1</button><button class="chip" data-r="3:2">3:2</button><button class="chip on" data-r="3:4">3:4</button><button class="chip" data-r="9:16">9:16</button><button class="chip" data-r="auto">자동</button></div>
+        <div class="slider-row"><label>판 너비</label><input type="range" id="cw" min="360" max="900" value="560"><span class="val" id="cwV">560</span><button class="rst" data-rst="cw">↺</button></div>
+      </div>
+    </div>
+
+    <div class="sec" data-panel="note">
+      <button class="sec-head" data-sec>주석 / 내 생각 <span class="chev">▾</span></button>
+      <div class="sec-body">
+        <textarea id="note-input" placeholder="적고 추가하면 캔버스 가운데에 붙습니다. 더블클릭 수정, 우상단 × 삭제, 글자 드래그 시 서식 팝업."></textarea>
+        <label class="f">주석 글씨체</label><select id="noteFont"></select>
+        <div class="toggle-row"><span>⤷ 기호 앞에 붙이기</span><label class="sw"><input type="checkbox" id="noteArrow"><span class="track"></span></label></div>
+        <div class="toggle-row"><span>주석 배경 표시</span><label class="sw"><input type="checkbox" id="noteBgOn"><span class="track"></span></label></div>
+        <div class="color-row"><label>주석 배경색</label><button class="swatch-btn" id="sw-noteBg"></button></div>
+        <div class="color-row"><label>주석 글자색</label><button class="swatch-btn" id="sw-noteFg"></button></div>
+        <div class="slider-row"><label>주석 크기</label><input type="range" id="noteSize" min="5" max="22" value="7"><span class="val" id="noteSizeV">7</span><button class="rst" data-rst="noteSize">↺</button></div>
+        <button class="btn full primary" id="addNote" style="margin-top:10px">＋ 주석 추가</button>
+      </div>
+    </div>
+
+  </div>
+</aside>
+
+<div class="stage-wrap">
+  <div class="topbar">
+    <div class="zoom-ctl"><button id="zoomOut">－</button><span id="zoomV" style="min-width:40px;text-align:center">맞춤</span><button id="zoomIn">＋</button><button id="zoomFit">⤢</button></div>
+    <div class="spacer"></div>
+    <div class="theme-pills" id="themePills"><button data-t="dark" class="on">다크</button><button data-t="light">라이트</button></div>
+    <select id="scale" style="width:auto;padding:6px 8px"><option value="2">2x</option><option value="3" selected>3x</option><option value="4">4x</option></select>
+    <button class="btn primary" id="exportBtn" style="white-space:nowrap">↓ 저장</button>
+  </div>
+  <div class="stage" id="stage">
+    <div class="canvas-outer" id="canvasOuter">
+      <div id="canvas">
+        <div class="bg-layer" id="bgLayer"></div>
+        <div class="sel-box" id="bgSelect"><span class="mv"></span><span class="h tl"></span><span class="h tr"></span><span class="h bl"></span><span class="h br"></span><span class="tag">이미지</span></div>
+        <div class="content" id="content"><div class="text-flow v-mid" id="flow"><div class="empty-tip">왼쪽에서 텍스트를 입력하면<br>여기에 발췌가 만들어집니다</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<nav class="mobile-tabbar" id="tabbar">
+  <button data-go="text"><span class="ic">✎</span>텍스트</button>
+  <button data-go="align"><span class="ic">≡</span>정렬</button>
+  <button data-go="style"><span class="ic">🎨</span>색·글꼴</button>
+  <button data-go="bg"><span class="ic">🖼</span>배경</button>
+  <button data-go="note"><span class="ic">📌</span>주석</button>
+</nav>
+
+<!-- floating format toolbar -->
+<div class="fmt-bar" id="fmtBar">
+  <button data-f="bold"><b>B</b></button>
+  <button data-f="italic"><i>I</i></button>
+  <button data-f="underline"><u>U</u></button>
+  <span class="sep"></span>
+  <button data-f="hilite" id="fmtHilite" title="형광펜"><span class="hlsw" id="fmtHlSw"></span></button>
+  <button data-f="textcolor" id="fmtTextColor" title="글자색" style="display:none"><span class="hlsw" id="fmtTcSw" style="border-radius:50%"></span></button>
+  <button data-f="size-up" title="크게">A＋</button>
+  <button data-f="size-down" title="작게" style="font-size:12px">A－</button>
+  <span class="sep"></span>
+  <button data-f="clear" title="지우기">⌫</button>
+</div>
+
+<div class="mini-pal" id="miniPal">
+  <div class="mini-lbl" id="miniLbl">색상</div>
+  <div class="mini-grid" id="miniGrid"></div>
+  <div class="mini-lbl">최근</div>
+  <div class="mini-recent" id="miniRecent"><span class="empty">없음</span></div>
+  <div class="mini-more">
+    <span style="font-size:11px;color:var(--ink-faint)">#</span>
+    <input type="text" id="miniHex" maxlength="7" placeholder="FFFFFF">
+    <input type="color" id="miniNative">
+  </div>
+</div>
+
+<div class="pop-mask" id="popMask">
+  <div class="popover" id="popover">
+    <div class="pop-preview"><div class="big" id="popBig"></div><b id="popName">색상</b></div>
+    <div class="pal-lbl">팔레트</div><div class="pal-grid" id="palGrid"></div>
+    <div class="pal-lbl">최근 사용</div><div class="recent-row" id="recentRow"><span class="empty">아직 없음</span></div>
+    <div class="hex-row"><span style="font-size:12px;color:var(--ink-faint)">#</span><input type="text" id="hexIn" maxlength="7" placeholder="FFFFFF"><input type="color" id="nativeIn" class="native"></div>
+    <div class="rgb-row"><div class="fld"><span>R</span><input type="text" id="rIn" maxlength="3"></div><div class="fld"><span>G</span><input type="text" id="gIn" maxlength="3"></div><div class="fld"><span>B</span><input type="text" id="bIn" maxlength="3"></div></div>
+  </div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
+const isMobile=()=>window.matchMedia('(max-width:860px)').matches;
+const DEFAULTS={hlOpac:60,fSize:11,lh:180,ls:0,pad:40,bgScale:100,bgOpac:60,cw:560,noteSize:7};
+const FONTS=[['고딕 (기본)',"'Noto Sans KR',sans-serif"],['나눔고딕',"'Nanum Gothic',sans-serif"],['나눔바른고딕',"'Nanum Gothic','Noto Sans KR',sans-serif"],['IBM Plex 고딕',"'IBM Plex Sans KR',sans-serif"],['명조 (나눔)',"'Nanum Myeongjo',serif"],['본명조',"'Noto Serif KR',serif"],['함렛 세리프',"'Hahmlet',serif"],['고운돋움',"'Gowun Dodum',sans-serif"],['고운바탕',"'Gowun Batang',serif"],['손글씨 개구',"'Gaegu',cursive"],['나눔손글씨 펜',"'Nanum Pen Script',cursive"]];
+const fontSel=$('#font'),noteFontSel=$('#noteFont');
+FONTS.forEach(([n,v])=>{fontSel.insertAdjacentHTML('beforeend',`<option value="${v}">${n}</option>`);noteFontSel.insertAdjacentHTML('beforeend',`<option value="${v}">${n}</option>`);});
+noteFontSel.value="'Nanum Gothic','Noto Sans KR',sans-serif";
+const PALETTE=['#FFFFFF','#F2F2F2','#D9D9D9','#BFBFBF','#999999','#666666','#404040','#1A1A1A','#000000','#B3B3B3','#FBD3D3','#FCE3C9','#FBF3C4','#E4F3C9','#CDEFD6','#C9EEF0','#CFE0FB','#D9D2F7','#F0D4F2','#F7D7E6','#F49B9B','#F5BE84','#F0DC72','#BFE08A','#8FD8A8','#82CFD6','#8FB6F0','#A99CE6','#D89BE0','#E89CBE'];
+const HL_PASTEL=['#FFF3A8','#FFD6C4','#C8F2D4','#C4E4FB','#E5D2F7','#FBD3E2'];
+const HL_MUTED=['#D4C77A','#D1A78C','#9CC4A6','#90A8C2','#B09CC2','#C29CAC'];
+const state={ratio:'3:4',cw:560,pad:40,fSize:11,lh:1.8,ls:0,font:"'Noto Sans KR',sans-serif",cDia:'#FFFFFF',cNarr:'#B3B3B3',cTrans:'#B3B3B3',showQuotes:false,narrItalic:false,hlColor:'#FFF3A8',hlOpac:.6,vAlign:'mid',hAlign:'left',bg:null,bgScale:1,bgOpac:.6,bgX:0,bgY:0,board:'#1A1A1A',bgEdit:false,noteFont:"'Nanum Gothic','Noto Sans KR',sans-serif",noteBg:'#FFF3A8',noteFg:'#999999',noteBgOn:false,noteArrow:false,noteSize:7,theme:'dark',zoom:null,recent:[]};
+
+function hexToRgba(hex,a){const h=hex.replace('#','');const f=h.length===3?h.split('').map(x=>x+x).join(''):h;const n=parseInt(f,16);return`rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;}
+function applyTheme(t){state.theme=t;if(t==='dark'){state.board='#1A1A1A';state.cDia='#FFFFFF';state.cNarr='#B3B3B3';state.cTrans='#B3B3B3';}else{state.board='#FFFFFF';state.cDia='#1A1A1A';state.cNarr='#8A8A8A';state.cTrans='#9A9A9A';}refreshSwatches();applyCanvas();applyTextStyles();}
+$$('[data-sec]').forEach(b=>b.addEventListener('click',()=>b.parentElement.classList.toggle('closed')));
+$('#uiDark').addEventListener('change',e=>document.body.classList.toggle('ui-dark',e.target.checked));
+
+/* reset buttons */
+$$('.rst').forEach(b=>b.addEventListener('click',()=>{const id=b.dataset.rst;const el=$('#'+id);el.value=DEFAULTS[id];el.dispatchEvent(new Event('input'));}));
+
+/* ===== palette popover ===== */
+const popMask=$('#popMask'),pop=$('#popover');let popTarget=null;
+function buildPalGrid(){const g=$('#palGrid');g.innerHTML='';PALETTE.forEach(c=>{const s=document.createElement('div');s.className='sw';s.style.background=c;s.dataset.c=c;s.addEventListener('click',()=>setColor(c));g.appendChild(s);});}
+function buildRecent(){const r=$('#recentRow');if(!state.recent.length){r.innerHTML='<span class="empty">아직 없음</span>';return;}r.innerHTML='';state.recent.forEach(c=>{const s=document.createElement('div');s.className='sw';s.style.background=c;s.addEventListener('click',()=>setColor(c));r.appendChild(s);});}
+function hexToRgb(h){h=h.replace('#','');if(h.length===3)h=h.split('').map(x=>x+x).join('');const n=parseInt(h,16);return[(n>>16)&255,(n>>8)&255,n&255];}
+function rgbToHex(r,g,b){const c=v=>Math.max(0,Math.min(255,+v||0)).toString(16).padStart(2,'0');return('#'+c(r)+c(g)+c(b)).toUpperCase();}
+function syncPopInputs(c){$('#popBig').style.background=c;$('#hexIn').value=c.replace('#','');$('#nativeIn').value=c.length===4?'#'+c.slice(1).split('').map(x=>x+x).join(''):c;const[r,g,b]=hexToRgb(c);$('#rIn').value=r;$('#gIn').value=g;$('#bIn').value=b;$$('#palGrid .sw').forEach(s=>s.classList.toggle('sel',s.dataset.c.toUpperCase()===c.toUpperCase()));}
+function setColor(c){c=c.toUpperCase();state[popTarget]=c;syncPopInputs(c);pushRecent(c);applyColorEffect(popTarget);}
+function pushRecent(c){c=c.toUpperCase();state.recent=[c,...state.recent.filter(x=>x!==c)].slice(0,10);buildRecent();}
+function applyColorEffect(key){refreshSwatches();if(key==='hlColor'){$('#fmtHlSw').style.background=state.hlColor;return;}if(key==='noteFg'){$('#fmtTcSw').style.background=state.noteFg;}if(key==='board')applyCanvas();else if(key.startsWith('note'))updateNotesStyle();else applyTextStyles();}
+function openPop(key,btn,name){popTarget=key;$('#popName').textContent=name;syncPopInputs(state[key]);popMask.classList.add('on');const r=btn.getBoundingClientRect();let left,top;if(isMobile()){left=(window.innerWidth-280)/2;top=Math.max(60,(window.innerHeight-360)/2);}else{left=r.left-210;top=r.bottom+6;if(left<8)left=8;if(top+300>window.innerHeight)top=Math.max(8,r.top-306);}pop.style.left=left+'px';pop.style.top=top+'px';}
+popMask.addEventListener('click',e=>{if(e.target===popMask)popMask.classList.remove('on');});
+$('#hexIn').addEventListener('input',e=>{let v=e.target.value.replace(/[^0-9a-fA-F]/g,'');if(v.length===6||v.length===3)setColor('#'+v);});
+$('#nativeIn').addEventListener('input',e=>setColor(e.target.value));
+['rIn','gIn','bIn'].forEach(id=>$('#'+id).addEventListener('input',()=>setColor(rgbToHex($('#rIn').value,$('#gIn').value,$('#bIn').value))));
+const COLOR_BTNS=[['sw-cDia','cDia','대사 색상'],['sw-cNarr','cNarr','지문 색상'],['sw-cTrans','cTrans','번역 색상'],['sw-hl','hlColor','형광펜 색상'],['sw-board','board','판 배경색'],['sw-noteBg','noteBg','주석 배경색'],['sw-noteFg','noteFg','주석 글자색']];
+COLOR_BTNS.forEach(([id,key,name])=>$('#'+id).addEventListener('click',()=>openPop(key,$('#'+id),name)));
+function refreshSwatches(){COLOR_BTNS.forEach(([id,key])=>$('#'+id).style.background=state[key]);}
+
+/* highlight preset chips: pastel + muted */
+const hlChips=$('#hlChips');
+function addHlChip(c,first){const b=document.createElement('button');b.className='chip'+(first?' on':'');b.style.cssText=`width:30px;height:26px;padding:0;border-color:${c};background:${c}`;b.addEventListener('click',()=>{$$('#hlChips .chip').forEach(x=>x.classList.remove('on'));b.classList.add('on');state.hlColor=c;$('#sw-hl').style.background=c;$('#fmtHlSw').style.background=c;});hlChips.appendChild(b);}
+HL_PASTEL.forEach((c,i)=>addHlChip(c,i===0));
+const div=document.createElement('div');div.style.cssText='flex-basis:100%;height:0';hlChips.appendChild(div);
+HL_MUTED.forEach(c=>addHlChip(c,false));
+
+/* ===== text ===== */
+const flow=$('#flow');
+function esc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function parseInline(line){let out='',i=0;while(i<line.length){const ch=line[i];if(ch==='*'){const e=line.indexOf('*',i+1);if(e>-1){out+=`<span class="m-narr">${esc(line.slice(i+1,e))}</span>`;i=e+1;continue;}}if(ch==='"'){const e=line.indexOf('"',i+1);if(e>-1){const lq=state.showQuotes?'&ldquo;':'',rq=state.showQuotes?'&rdquo;':'';out+=`<span class="m-dia">${lq}${esc(line.slice(i+1,e))}${rq}</span>`;i=e+1;continue;}}let j=i;while(j<line.length&&line[j]!=='*'&&line[j]!=='"')j++;out+=`<span class="m-dia">${esc(line.slice(i,j))}</span>`;i=j;}return out;}
+function buildFromMarkup(){const raw=$('#src').value;if(!raw.trim()){flow.innerHTML='<div class="empty-tip">왼쪽에서 텍스트를 입력하면<br>여기에 발췌가 만들어집니다</div>';return;}const lines=raw.split('\n');let html='',para=[];const flush=()=>{if(para.length){html+='<p>'+para.join('<br>')+'</p>';para=[];}};for(let k=0;k<lines.length;k++){let line=lines[k];if(line.trim()===''){flush();continue;}if(line[0]==='@'){const orig=line.slice(1);let tr=null;if(k+1<lines.length&&lines[k+1][0]==='='){tr=lines[k+1].slice(1);k++;}para.push(`<span class="m-orig">${parseInline(orig)}</span>`+(tr!==null?`<br><span class="m-trans">— ${esc(tr)}</span>`:''));continue;}if(line[0]==='='){para.push(`<span class="m-trans">— ${esc(line.slice(1))}</span>`);continue;}para.push(parseInline(line));}flush();flow.innerHTML=html;applyTextStyles();}
+$('#src').addEventListener('input',buildFromMarkup);
+flow.setAttribute('contenteditable','true');flow.style.userSelect='text';
+
+function applyTextStyles(){flow.style.setProperty('--pad',state.pad+'px');flow.style.fontSize=state.fSize+'px';flow.style.lineHeight=state.lh;flow.style.letterSpacing=state.ls/100+'em';flow.style.fontFamily=state.font;flow.style.textAlign=state.hAlign;flow.classList.toggle('narr-italic',state.narrItalic);flow.querySelectorAll('.m-narr').forEach(e=>e.style.color=state.cNarr);flow.querySelectorAll('.m-dia').forEach(e=>e.style.color=state.cDia);flow.querySelectorAll('.m-orig').forEach(e=>e.style.color=state.cDia);flow.querySelectorAll('.m-trans').forEach(e=>{e.style.color=state.cTrans;e.style.fontStyle='italic';e.style.fontSize='.82em';});}
+
+$('#vAlign').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$$('#vAlign button').forEach(x=>x.classList.remove('on'));b.classList.add('on');state.vAlign=b.dataset.v;flow.classList.remove('v-top','v-mid','v-bot');flow.classList.add('v-'+state.vAlign);});
+$('#hAlign').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const a=b.dataset.a;const sel=window.getSelection();if(sel.rangeCount&&!sel.isCollapsed&&flow.contains(sel.getRangeAt(0).commonAncestorContainer)){const range=sel.getRangeAt(0);const ps=new Set();flow.querySelectorAll('p').forEach(p=>{if(range.intersectsNode(p))ps.add(p);});if(ps.size)ps.forEach(p=>p.style.textAlign=a);}else{$$('#hAlign button').forEach(x=>x.classList.remove('on'));b.classList.add('on');state.hAlign=a;flow.style.textAlign=a;flow.querySelectorAll('p').forEach(p=>p.style.textAlign='');}});
+
+/* ===== floating format toolbar (본문 + 주석 공용) ===== */
+const fmtBar=$('#fmtBar');
+let fmtCtx=null; // 'flow' | note element
+function editableUnderSelection(){
+  const sel=window.getSelection();
+  if(!sel.rangeCount||sel.isCollapsed)return null;
+  const node=sel.getRangeAt(0).commonAncestorContainer;
+  const el=node.nodeType===3?node.parentElement:node;
+  if(flow.contains(el))return flow;
+  const body=el.closest('.note .body');
+  if(body)return body;
+  return null;
+}
+function showFmtBar(){
+  const ctx=editableUnderSelection();
+  if(!ctx){hideFmtBar();return;}
+  fmtCtx=ctx;
+  const inNote=ctx!==flow;
+  $('#fmtHilite').style.display=inNote?'none':'';
+  $('#fmtTextColor').style.display=inNote?'':'none';
+  // reflect whether selection is already highlighted (for toggle hint)
+  $('#fmtHilite').classList.toggle('on',selectionIsHighlighted());
+  const rect=window.getSelection().getRangeAt(0).getBoundingClientRect();
+  fmtBar.classList.add('on');
+  const bw=fmtBar.offsetWidth||230,bh=fmtBar.offsetHeight||38;
+  let left=rect.left+rect.width/2-bw/2;
+  left=Math.max(8,Math.min(window.innerWidth-bw-8,left));
+  let top=rect.top-bh-8;
+  if(top<8)top=rect.bottom+8;
+  fmtBar.style.left=left+'px';fmtBar.style.top=top+'px';
+}
+function hideFmtBar(){fmtBar.classList.remove('on');fmtCtx=null;}
+document.addEventListener('selectionchange',()=>{
+  if(typeof miniPal!=='undefined'&&miniPal.classList.contains('on'))return;
+  const ctx=editableUnderSelection();
+  if(ctx)showFmtBar(); else hideFmtBar();
+});
+function wrapInCtx(tag,style){
+  const sel=window.getSelection();if(!sel.rangeCount||sel.isCollapsed)return;
+  const range=sel.getRangeAt(0);
+  if(fmtCtx&&!fmtCtx.contains(range.commonAncestorContainer))return;
+  const span=document.createElement(tag);if(style)span.setAttribute('style',style);
+  try{span.appendChild(range.extractContents());range.insertNode(span);}catch(e){}
+}
+function changeSizeInCtx(delta){
+  const sel=window.getSelection();if(!sel.rangeCount||sel.isCollapsed)return;
+  const range=sel.getRangeAt(0);
+  const span=document.createElement('span');
+  const probe=range.commonAncestorContainer.nodeType===3?range.commonAncestorContainer.parentElement:range.commonAncestorContainer;
+  const cur=parseFloat(getComputedStyle(probe).fontSize)||13;
+  span.style.fontSize=Math.max(6,cur+delta)+'px';
+  try{span.appendChild(range.extractContents());range.insertNode(span);}catch(e){}
+}
+/* is the current selection fully inside / covered by highlight spans? */
+function selectionIsHighlighted(){
+  const sel=window.getSelection();if(!sel.rangeCount||sel.isCollapsed)return false;
+  const node=sel.getRangeAt(0).commonAncestorContainer;
+  const el=node.nodeType===3?node.parentElement:node;
+  return !!el.closest('.hl-mark');
+}
+/* remove highlight spans intersecting the selection (toggle off) */
+function removeHighlight(ctx){
+  const sel=window.getSelection();if(!sel.rangeCount)return;
+  const range=sel.getRangeAt(0);
+  const marks=[...ctx.querySelectorAll('.hl-mark')].filter(m=>range.intersectsNode(m));
+  marks.forEach(m=>{const parent=m.parentNode;while(m.firstChild)parent.insertBefore(m.firstChild,m);parent.removeChild(m);parent.normalize();});
+}
+function toggleHighlight(ctx){
+  if(selectionIsHighlighted()){removeHighlight(ctx);}
+  else{
+    // strip any nested highlight first to avoid stacking, then wrap
+    removeHighlight(ctx);
+    const sel=window.getSelection();if(!sel.rangeCount||sel.isCollapsed)return;
+    const range=sel.getRangeAt(0);
+    const span=document.createElement('span');
+    span.className='hl-mark';
+    span.style.cssText=`background:${hexToRgba(state.hlColor,state.hlOpac)};border-radius:0;padding:0 1px;`;
+    try{span.appendChild(range.extractContents());range.insertNode(span);}catch(e){}
+  }
+}
+function applyTextColor(){
+  const sel=window.getSelection();if(!sel.rangeCount||sel.isCollapsed)return;
+  const range=sel.getRangeAt(0);
+  const span=document.createElement('span');span.style.color=state.noteFg;
+  try{span.appendChild(range.extractContents());range.insertNode(span);}catch(e){}
+}
+fmtBar.querySelectorAll('button').forEach(btn=>{
+  btn.addEventListener('mousedown',e=>e.preventDefault());
+  btn.addEventListener('click',e=>{
+    const f=btn.dataset.f;
+    if(f==='bold')wrapInCtx('strong');
+    else if(f==='italic')wrapInCtx('em');
+    else if(f==='underline')wrapInCtx('u');
+    else if(f==='hilite'){
+      // if already highlighted, a plain click toggles OFF; otherwise open color choices
+      if(selectionIsHighlighted()){toggleHighlight(fmtCtx||flow);$('#fmtHilite').classList.remove('on');}
+      else openMiniPal('hilite',btn);
+    }
+    else if(f==='textcolor')openMiniPal('textcolor',btn);
+    else if(f==='size-up')changeSizeInCtx(1);
+    else if(f==='size-down')changeSizeInCtx(-1);
+    else if(f==='clear'){const s=window.getSelection();if(s.rangeCount&&!s.isCollapsed){const r=s.getRangeAt(0),t=r.toString();r.deleteContents();r.insertNode(document.createTextNode(t));}}
+  });
+});
+
+/* ===== mini color palette inside the toolbar ===== */
+const miniPal=$('#miniPal');
+let miniMode=null,savedRange=null;
+function saveRange(){const s=window.getSelection();if(s.rangeCount)savedRange=s.getRangeAt(0).cloneRange();}
+function restoreRange(){if(!savedRange)return;const s=window.getSelection();s.removeAllRanges();s.addRange(savedRange);}
+function buildMini(){
+  const grid=$('#miniGrid');grid.innerHTML='';
+  const list=miniMode==='hilite'?[...HL_PASTEL,...HL_MUTED]:PALETTE;
+  list.forEach(c=>{const sw=document.createElement('div');sw.className='sw';sw.style.background=c;sw.addEventListener('mousedown',e=>e.preventDefault());sw.addEventListener('click',()=>miniPick(c));grid.appendChild(sw);});
+  const r=$('#miniRecent');
+  if(!state.recent.length)r.innerHTML='<span class="empty">없음</span>';
+  else{r.innerHTML='';state.recent.forEach(c=>{const sw=document.createElement('div');sw.className='sw';sw.style.background=c;sw.addEventListener('mousedown',e=>e.preventDefault());sw.addEventListener('click',()=>miniPick(c));r.appendChild(sw);});}
+}
+function openMiniPal(mode,btn){
+  miniMode=mode;saveRange();
+  $('#miniLbl').textContent=mode==='hilite'?'형광펜 색':'글자색';
+  const cur=mode==='hilite'?state.hlColor:state.noteFg;
+  $('#miniHex').value=cur.replace('#','');$('#miniNative').value=cur.length===4?'#'+cur.slice(1).split('').map(x=>x+x).join(''):cur;
+  buildMini();
+  miniPal.classList.add('on');
+  const r=btn.getBoundingClientRect();const pw=182,ph=miniPal.offsetHeight||190;
+  let left=Math.max(8,Math.min(window.innerWidth-pw-8,r.left+r.width/2-pw/2));
+  let top=r.bottom+6;if(top+ph>window.innerHeight)top=Math.max(8,r.top-ph-6);
+  miniPal.style.left=left+'px';miniPal.style.top=top+'px';
+}
+function closeMiniPal(){miniPal.classList.remove('on');miniMode=null;}
+function miniPick(c){
+  c=c.toUpperCase();restoreRange();
+  if(miniMode==='hilite'){state.hlColor=c;$('#sw-hl').style.background=c;$('#fmtHlSw').style.background=c;$$('#hlChips .chip').forEach(x=>x.classList.remove('on'));toggleHighlight(fmtCtx||flow);}
+  else{state.noteFg=c;$('#sw-noteFg').style.background=c;$('#fmtTcSw').style.background=c;applyTextColor();}
+  pushRecent(c);closeMiniPal();
+}
+$('#miniHex').addEventListener('input',e=>{let v=e.target.value.replace(/[^0-9a-fA-F]/g,'');if(v.length===6||v.length===3)miniPick('#'+v);});
+$('#miniNative').addEventListener('input',e=>miniPick(e.target.value));
+document.addEventListener('pointerdown',e=>{if(miniPal.classList.contains('on')&&!miniPal.contains(e.target)&&!e.target.closest('#fmtHilite')&&!e.target.closest('#fmtTextColor'))closeMiniPal();});
+
+function applyCanvas(){const c=$('#canvas');c.style.width=state.cw+'px';c.style.background=state.board;if(state.ratio==='auto'){c.style.height='auto';c.style.minHeight='220px';$('#content').style.height='auto';flow.style.position='relative';flow.classList.remove('v-top','v-mid','v-bot');}else{const[rw,rh]=state.ratio.split(':').map(Number);c.style.height=(state.cw*rh/rw)+'px';$('#content').style.height='100%';flow.style.position='absolute';if(!flow.classList.contains('v-'+state.vAlign))flow.classList.add('v-'+state.vAlign);}fitZoom();positionBgSelect();}
+
+/* ===== background ===== */
+const bgLayer=$('#bgLayer'),bgSelect=$('#bgSelect'),canvasEl=$('#canvas');
+let bgImgEl=null,natW=0,natH=0;
+function renderBg(){if(!state.bg){bgLayer.innerHTML='';bgImgEl=null;bgSelect.classList.remove('on');return;}if(!bgImgEl){bgLayer.innerHTML='';bgImgEl=new Image();bgImgEl.onload=()=>{natW=bgImgEl.naturalWidth;natH=bgImgEl.naturalHeight;positionBgSelect();};bgImgEl.src=state.bg;bgLayer.appendChild(bgImgEl);}bgImgEl.style.opacity=state.bgOpac;bgImgEl.style.transform=`translate(calc(-50% + ${state.bgX}px), calc(-50% + ${state.bgY}px)) scale(${state.bgScale})`;positionBgSelect();}
+function positionBgSelect(){if(!bgImgEl||!natW||!state.bgEdit){bgSelect.classList.remove('on');return;}const w=natW*state.bgScale,h=natH*state.bgScale;const cx=canvasEl.clientWidth/2+state.bgX,cy=canvasEl.clientHeight/2+state.bgY;bgSelect.style.left=(cx-w/2)+'px';bgSelect.style.top=(cy-h/2)+'px';bgSelect.style.width=w+'px';bgSelect.style.height=h+'px';bgSelect.classList.toggle('on',state.bgEdit&&!!state.bg);}
+function setBgEdit(on){state.bgEdit=on;canvasEl.classList.toggle('bg-edit',on);$('#bgEditToggle').classList.toggle('on',on);$('#bgEditToggle').textContent=on?'✓ 편집 모드 끄기':'✥ 이미지 편집 모드';positionBgSelect();}
+$('#bgEditToggle').addEventListener('click',()=>setBgEdit(!state.bgEdit));
+let bgDrag=null,bgHandle=null;
+function imgDown(e){bgDrag={sx:e.clientX,sy:e.clientY,ox:state.bgX,oy:state.bgY};e.preventDefault();}
+bgLayer.addEventListener('pointerdown',e=>{if(state.bgEdit&&bgImgEl)imgDown(e);});
+bgSelect.querySelector('.mv').addEventListener('pointerdown',e=>{imgDown(e);e.stopPropagation();});
+$$('#bgSelect .h').forEach(h=>h.addEventListener('pointerdown',e=>{bgHandle={sx:e.clientX,sy:e.clientY,os:state.bgScale};e.stopPropagation();e.preventDefault();}));
+window.addEventListener('pointermove',e=>{const z=state.zoom||curZoom()||1;if(bgDrag){state.bgX=bgDrag.ox+(e.clientX-bgDrag.sx)/z;state.bgY=bgDrag.oy+(e.clientY-bgDrag.sy)/z;renderBg();}if(bgHandle){const d=((e.clientX-bgHandle.sx)+(e.clientY-bgHandle.sy))/2;let ns=bgHandle.os*(1+d/200);ns=Math.max(.05,Math.min(8,ns));state.bgScale=ns;$('#bgScale').value=Math.round(ns*100);$('#bgScaleV').textContent=Math.round(ns*100)+'%';renderBg();}});
+window.addEventListener('pointerup',()=>{bgDrag=null;bgHandle=null;});
+$('#pickImg').addEventListener('click',()=>$('#imgFile').click());
+$('#imgFile').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{state.bg=ev.target.result;bgImgEl=null;state.bgX=0;state.bgY=0;renderBg();setBgEdit(true);if(isMobile())closeSheet();};r.readAsDataURL(f);});
+$('#bgCenter').addEventListener('click',()=>{state.bgX=0;state.bgY=0;renderBg();});
+$('#bgFit').addEventListener('click',()=>{if(!natW)return;const s=Math.max(canvasEl.clientWidth/natW,canvasEl.clientHeight/natH);state.bgScale=s;state.bgX=0;state.bgY=0;$('#bgScale').value=Math.round(s*100);$('#bgScaleV').textContent=Math.round(s*100)+'%';renderBg();});
+
+/* ===== notes ===== */
+let noteZ=20,selNote=null;
+function addNote(text){const n=document.createElement('div');n.className='note'+(state.noteBgOn?' bg-on':'');const cw=canvasEl.clientWidth,ch=canvasEl.clientHeight||300;n.style.left=(cw/2-70)+'px';n.style.top=(ch/2-20)+'px';n.style.zIndex=++noteZ;n.style.fontFamily=state.noteFont;n.style.color=state.noteFg;n.style.fontSize=state.noteSize+'px';n.style.background=state.noteBgOn?state.noteBg:'transparent';n.innerHTML=`<button class="del">×</button><div class="body" contenteditable="true"></div>`;const body=n.querySelector('.body');body.textContent=(state.noteArrow?'⤷ ':'')+(text||'메모');$('#content').appendChild(n);bindNote(n);selectNote(n);return n;}
+function bindNote(n){
+  const body=n.querySelector('.body');
+  let drag=null;
+  n.addEventListener('pointerdown',e=>{
+    if(e.target.classList.contains('body')||e.target.classList.contains('del'))return;
+    selectNote(n);
+    const z=state.zoom||curZoom()||1;
+    drag={sx:e.clientX,sy:e.clientY,ox:parseFloat(n.style.left),oy:parseFloat(n.style.top),z};
+    n.style.zIndex=++noteZ;
+    try{n.setPointerCapture(e.pointerId);}catch(_){}
+    e.stopPropagation();e.preventDefault();
+  });
+  n.addEventListener('pointermove',e=>{
+    if(!drag)return;
+    n.style.left=drag.ox+(e.clientX-drag.sx)/drag.z+'px';
+    n.style.top=drag.oy+(e.clientY-drag.sy)/drag.z+'px';
+  });
+  const end=e=>{if(drag){drag=null;try{n.releasePointerCapture(e.pointerId);}catch(_){}}};
+  n.addEventListener('pointerup',end);
+  n.addEventListener('pointercancel',end);
+  n.addEventListener('click',e=>{if(!e.target.classList.contains('body')&&!e.target.classList.contains('del'))selectNote(n);});
+  body.addEventListener('dblclick',()=>body.focus());
+  n.querySelector('.del').addEventListener('click',e=>{e.stopPropagation();if(selNote===n)selNote=null;n.remove();});
+}
+function selectNote(n){if(selNote&&selNote!==n)selNote.classList.remove('sel');selNote=n;n.classList.add('sel');}
+function deselectNote(){if(selNote){selNote.classList.remove('sel');selNote=null;}}
+canvasEl.addEventListener('pointerdown',e=>{if(e.target.closest('.note')||e.target.closest('#bgSelect'))return;deselectNote();});
+function updateNotesStyle(){$$('.note').forEach(n=>{n.style.fontFamily=state.noteFont;n.style.color=state.noteFg;n.style.fontSize=state.noteSize+'px';n.style.background=state.noteBgOn?state.noteBg:'transparent';n.classList.toggle('bg-on',state.noteBgOn);});}
+$('#addNote').addEventListener('click',()=>{const v=$('#note-input').value.trim();addNote(v||'메모');$('#note-input').value='';if(isMobile())closeSheet();});
+$('#noteFont').addEventListener('change',e=>{state.noteFont=e.target.value;updateNotesStyle();});
+$('#noteBgOn').addEventListener('change',e=>{state.noteBgOn=e.target.checked;updateNotesStyle();});
+$('#noteArrow').addEventListener('change',e=>{
+  state.noteArrow=e.target.checked;
+  $$('.note .body').forEach(body=>{
+    const has=body.textContent.startsWith('⤷ ');
+    if(state.noteArrow&&!has){body.insertBefore(document.createTextNode('⤷ '),body.firstChild);}
+    else if(!state.noteArrow&&has){
+      // remove leading "⤷ " from the first text node
+      let node=body.firstChild;
+      while(node&&node.nodeType!==3)node=node.firstChild;
+      if(node&&node.textContent.startsWith('⤷ '))node.textContent=node.textContent.slice(2);
+      else if(body.textContent.startsWith('⤷ '))body.textContent=body.textContent.slice(2);
+    }
+  });
+});
+
+/* ===== zoom ===== */
+const stage=$('#stage'),outer=$('#canvasOuter');
+function fitZoom(){if(state.zoom!==null){outer.style.transform=`scale(${state.zoom})`;return;}const avail=stage.clientWidth-(isMobile()?24:80);const cw=canvasEl.offsetWidth||state.cw;const z=Math.min(1,avail/cw);outer.style.transform=`scale(${z})`;$('#zoomV').textContent='맞춤';}
+$('#zoomIn').addEventListener('click',()=>{state.zoom=(state.zoom||curZoom())+0.1;clampZoom();});
+$('#zoomOut').addEventListener('click',()=>{state.zoom=Math.max(.2,(state.zoom||curZoom())-0.1);clampZoom();});
+$('#zoomFit').addEventListener('click',()=>{state.zoom=null;fitZoom();});
+function curZoom(){const m=outer.style.transform.match(/scale\(([\d.]+)\)/);return m?parseFloat(m[1]):1;}
+function clampZoom(){outer.style.transform=`scale(${state.zoom})`;$('#zoomV').textContent=Math.round(state.zoom*100)+'%';positionBgSelect();}
+window.addEventListener('resize',()=>{if(state.zoom===null)fitZoom();});
+
+function bindRange(id,fn){$('#'+id).addEventListener('input',fn);}
+bindRange('fSize',()=>{state.fSize=+$('#fSize').value;$('#fSizeV').textContent=state.fSize;applyTextStyles();});
+bindRange('lh',()=>{state.lh=+$('#lh').value/100;$('#lhV').textContent=state.lh.toFixed(2);applyTextStyles();});
+bindRange('ls',()=>{state.ls=+$('#ls').value;$('#lsV').textContent=state.ls;applyTextStyles();});
+bindRange('pad',()=>{state.pad=+$('#pad').value;$('#padV').textContent=state.pad;applyTextStyles();});
+bindRange('cw',()=>{state.cw=+$('#cw').value;$('#cwV').textContent=state.cw;applyCanvas();});
+bindRange('bgScale',()=>{state.bgScale=+$('#bgScale').value/100;$('#bgScaleV').textContent=$('#bgScale').value+'%';renderBg();});
+bindRange('bgOpac',()=>{state.bgOpac=+$('#bgOpac').value/100;$('#bgOpacV').textContent=$('#bgOpac').value+'%';renderBg();});
+bindRange('hlOpac',()=>{state.hlOpac=+$('#hlOpac').value/100;$('#hlOpacV').textContent=$('#hlOpac').value+'%';});
+bindRange('noteSize',()=>{state.noteSize=+$('#noteSize').value;$('#noteSizeV').textContent=state.noteSize;updateNotesStyle();});
+$('#showQuotes').addEventListener('change',e=>{state.showQuotes=e.target.checked;buildFromMarkup();});
+$('#narrItalic').addEventListener('change',e=>{state.narrItalic=e.target.checked;applyTextStyles();});
+$('#font').addEventListener('change',e=>{state.font=e.target.value;applyTextStyles();});
+$('#ratioChips').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;$('#ratioChips .chip.on')?.classList.remove('on');b.classList.add('on');state.ratio=b.dataset.r;applyCanvas();});
+$('#themePills').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$$('#themePills button').forEach(x=>x.classList.remove('on'));b.classList.add('on');applyTheme(b.dataset.t);});
+
+$('#exportBtn').addEventListener('click',async()=>{const btn=$('#exportBtn'),old=btn.textContent;btn.textContent='저장 중...';btn.disabled=true;document.body.classList.add('no-ui');hideFmtBar();const wasBgSel=state.bgEdit;bgSelect.classList.remove('on');const wasNote=selNote;if(selNote)selNote.classList.remove('sel');const savedZoom=outer.style.transform;outer.style.transform='scale(1)';const tip=flow.querySelector('.empty-tip');if(tip)tip.style.display='none';try{const canvas=await html2canvas(canvasEl,{scale:+$('#scale').value,backgroundColor:state.board,useCORS:true,logging:false});const a=document.createElement('a');a.download='발췌_'+Date.now()+'.png';a.href=canvas.toDataURL('image/png');a.click();}catch(err){alert('저장 실패: '+err.message);}finally{outer.style.transform=savedZoom;if(tip)tip.style.display='';document.body.classList.remove('no-ui');if(wasBgSel)positionBgSelect();if(wasNote){selNote=wasNote;selNote.classList.add('sel');}btn.textContent=old;btn.disabled=false;}});
+
+const sidebar=$('#sidebar');
+function openSheet(panel){sidebar.classList.add('open');if(panel){$$('.sec').forEach(s=>s.classList.toggle('closed',s.dataset.panel!==panel));const tgt=$(`.sec[data-panel="${panel}"]`);if(tgt)setTimeout(()=>$('#sideScroll').scrollTo({top:tgt.offsetTop-4,behavior:'smooth'}),60);}$$('#tabbar button').forEach(b=>b.classList.toggle('active',b.dataset.go===panel));}
+function closeSheet(){sidebar.classList.remove('open');$$('#tabbar button').forEach(b=>b.classList.remove('active'));}
+$('#tabbar').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(sidebar.classList.contains('open')&&b.classList.contains('active'))closeSheet();else openSheet(b.dataset.go);});
+$('#sheetClose').addEventListener('click',closeSheet);
+/* drag the grip down to dismiss */
+let gripStart=null,gripMoved=0;
+$('#grip').addEventListener('pointerdown',e=>{gripStart=e.clientY;gripMoved=0;sidebar.style.transition='none';try{$('#grip').setPointerCapture(e.pointerId);}catch(_){}});
+$('#grip').addEventListener('pointermove',e=>{if(gripStart===null)return;gripMoved=Math.max(0,e.clientY-gripStart);sidebar.style.transform=`translateY(${gripMoved}px)`;});
+$('#grip').addEventListener('pointerup',e=>{if(gripStart===null)return;sidebar.style.transition='';sidebar.style.transform='';if(gripMoved>90)closeSheet();gripStart=null;try{$('#grip').releasePointerCapture(e.pointerId);}catch(_){}});
+/* tap on the preview area closes the sheet on mobile */
+$('#stage').addEventListener('pointerdown',()=>{if(isMobile()&&sidebar.classList.contains('open'))closeSheet();});
+
+buildPalGrid();buildRecent();refreshSwatches();$('#fmtHlSw').style.background=state.hlColor;$('#fmtTcSw').style.background=state.noteFg;
+$('#src').value=`@Che ci fai qui, piccola?
+=여기서 뭐 하는 거야, 꼬마.
+
+*그의 목소리는 방금 전 여성 직원에게 쏟아내던 달콤한 열정과는 전혀 다른 톤이었다. 낮고, 조용하며, 어딘가 날이 선.*
+
+"...Non dirmi che sei tu la guida temporanea."
+
+*그의 손이 비앙카의 어깨를 살짝 움켜쥐었다. 부드럽게, 그러나 분명한 힘이 실려 있었다.*`;
+applyTheme('dark');buildFromMarkup();applyCanvas();applyTextStyles();
+</script>
+</body>
+</html>
