@@ -131,10 +131,12 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
 .sel-box .mv{position:absolute;inset:0;pointer-events:auto;cursor:move}
 .sel-box .tag{position:absolute;left:50%;top:-22px;transform:translateX(-50%);background:var(--accent);color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;white-space:nowrap;pointer-events:none}
 #canvas.bg-edit .content{pointer-events:none}
-#canvas.bg-edit .bg-layer{z-index:25}
-#canvas.bg-edit .bg-layer img{cursor:grab}
+#canvas.bg-edit .bg-layer{z-index:25;touch-action:none}
+#canvas.bg-edit{touch-action:none}
+#canvas.bg-edit .bg-layer img{cursor:grab;touch-action:none}
+.sel-box .mv,.sel-box .h{touch-action:none}
 #canvas .content{position:relative;z-index:2;height:100%;overflow:hidden}
-.text-flow{position:absolute;left:0;right:0;padding:var(--pad,40px);white-space:pre-wrap;word-break:break-word}
+.text-flow{position:absolute;left:0;right:0;padding:var(--pad,40px);white-space:pre-wrap;word-break:keep-all;overflow-wrap:break-word}
 .text-flow.v-top{top:0}
 .text-flow.v-mid{top:50%;transform:translateY(-50%)}
 .text-flow.v-bot{bottom:0}
@@ -398,8 +400,9 @@ HL_MUTED.forEach(c=>addHlChip(c,false));
 const flow=$('#flow');
 function esc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 function parseInline(line){let out='',i=0;while(i<line.length){const ch=line[i];if(ch==='*'){const e=line.indexOf('*',i+1);if(e>-1){out+=`<span class="m-narr">${esc(line.slice(i+1,e))}</span>`;i=e+1;continue;}}if(ch==='"'){const e=line.indexOf('"',i+1);if(e>-1){const lq=state.showQuotes?'&ldquo;':'',rq=state.showQuotes?'&rdquo;':'';out+=`<span class="m-dia">${lq}${esc(line.slice(i+1,e))}${rq}</span>`;i=e+1;continue;}}let j=i;while(j<line.length&&line[j]!=='*'&&line[j]!=='"')j++;out+=`<span class="m-dia">${esc(line.slice(i,j))}</span>`;i=j;}return out;}
-function buildFromMarkup(){const raw=$('#src').value;if(!raw.trim()){flow.innerHTML='<div class="empty-tip">왼쪽에서 텍스트를 입력하면<br>여기에 발췌가 만들어집니다</div>';return;}const lines=raw.split('\n');let html='',para=[];const flush=()=>{if(para.length){html+='<p>'+para.join('<br>')+'</p>';para=[];}};for(let k=0;k<lines.length;k++){let line=lines[k];if(line.trim()===''){flush();continue;}if(line[0]==='@'){const orig=line.slice(1);let tr=null;if(k+1<lines.length&&lines[k+1][0]==='='){tr=lines[k+1].slice(1);k++;}para.push(`<span class="m-orig">${parseInline(orig)}</span>`+(tr!==null?`<br><span class="m-trans">— ${esc(tr)}</span>`:''));continue;}if(line[0]==='='){para.push(`<span class="m-trans">— ${esc(line.slice(1))}</span>`);continue;}para.push(parseInline(line));}flush();flow.innerHTML=html;applyTextStyles();}
-$('#src').addEventListener('input',buildFromMarkup);
+function buildFromMarkup(){const raw=$('#src').value;if(!raw.trim()){flow.innerHTML='<div class="empty-tip">왼쪽에서 텍스트를 입력하면<br>여기에 발췌가 만들어집니다</div>';return;}const lines=raw.split('\n');let html='',para=[];const flush=()=>{if(para.length){html+='<p>'+para.join('<br>')+'</p>';para=[];}};for(let k=0;k<lines.length;k++){let line=lines[k];if(line.trim()===''){flush();continue;}if(line[0]==='@'){flush();const orig=line.slice(1);let tr=null;if(k+1<lines.length&&lines[k+1][0]==='='){tr=lines[k+1].slice(1);k++;}html+=`<p><span class="m-orig">${parseInline(orig)}</span>`+(tr!==null?`<br><span class="m-trans">— ${esc(tr)}</span>`:'')+`</p>`;continue;}if(line[0]==='='){flush();html+=`<p><span class="m-trans">— ${esc(line.slice(1))}</span></p>`;continue;}para.push(parseInline(line));}flush();flow.innerHTML=html;applyTextStyles();}
+let buildTimer=null;
+$('#src').addEventListener('input',()=>{clearTimeout(buildTimer);buildTimer=setTimeout(buildFromMarkup,140);});
 flow.setAttribute('contenteditable','true');flow.style.userSelect='text';
 
 function applyTextStyles(){flow.style.setProperty('--pad',state.pad+'px');flow.style.fontSize=state.fSize+'px';flow.style.lineHeight=state.lh;flow.style.letterSpacing=state.ls/100+'em';flow.style.fontFamily=state.font;flow.style.textAlign=state.hAlign;flow.classList.toggle('narr-italic',state.narrItalic);flow.querySelectorAll('.m-narr').forEach(e=>e.style.color=state.cNarr);flow.querySelectorAll('.m-dia').forEach(e=>e.style.color=state.cDia);flow.querySelectorAll('.m-orig').forEach(e=>e.style.color=state.cDia);flow.querySelectorAll('.m-trans').forEach(e=>{e.style.color=state.cTrans;e.style.fontStyle='italic';e.style.fontSize='.82em';});}
@@ -439,10 +442,14 @@ function showFmtBar(){
   fmtBar.style.left=left+'px';fmtBar.style.top=top+'px';
 }
 function hideFmtBar(){fmtBar.classList.remove('on');fmtCtx=null;}
+let selTimer=null;
 document.addEventListener('selectionchange',()=>{
   if(typeof miniPal!=='undefined'&&miniPal.classList.contains('on'))return;
-  const ctx=editableUnderSelection();
-  if(ctx)showFmtBar(); else hideFmtBar();
+  clearTimeout(selTimer);
+  selTimer=setTimeout(()=>{
+    const ctx=editableUnderSelection();
+    if(ctx)showFmtBar(); else hideFmtBar();
+  },60);
 });
 function wrapInCtx(tag,style){
   const sel=window.getSelection();if(!sel.rangeCount||sel.isCollapsed)return;
@@ -558,11 +565,13 @@ function positionBgSelect(){if(!bgImgEl||!natW||!state.bgEdit){bgSelect.classLis
 function setBgEdit(on){state.bgEdit=on;canvasEl.classList.toggle('bg-edit',on);$('#bgEditToggle').classList.toggle('on',on);$('#bgEditToggle').textContent=on?'✓ 편집 모드 끄기':'✥ 이미지 편집 모드';positionBgSelect();}
 $('#bgEditToggle').addEventListener('click',()=>setBgEdit(!state.bgEdit));
 let bgDrag=null,bgHandle=null;
-function imgDown(e){bgDrag={sx:e.clientX,sy:e.clientY,ox:state.bgX,oy:state.bgY};e.preventDefault();}
-bgLayer.addEventListener('pointerdown',e=>{if(state.bgEdit&&bgImgEl)imgDown(e);});
-bgSelect.querySelector('.mv').addEventListener('pointerdown',e=>{imgDown(e);e.stopPropagation();});
-$$('#bgSelect .h').forEach(h=>h.addEventListener('pointerdown',e=>{bgHandle={sx:e.clientX,sy:e.clientY,os:state.bgScale};e.stopPropagation();e.preventDefault();}));
-window.addEventListener('pointermove',e=>{const z=state.zoom||curZoom()||1;if(bgDrag){state.bgX=bgDrag.ox+(e.clientX-bgDrag.sx)/z;state.bgY=bgDrag.oy+(e.clientY-bgDrag.sy)/z;renderBg();}if(bgHandle){const d=((e.clientX-bgHandle.sx)+(e.clientY-bgHandle.sy))/2;let ns=bgHandle.os*(1+d/200);ns=Math.max(.05,Math.min(8,ns));state.bgScale=ns;$('#bgScale').value=Math.round(ns*100);$('#bgScaleV').textContent=Math.round(ns*100)+'%';renderBg();}});
+let bgRaf=null;
+function scheduleBg(){if(bgRaf)return;bgRaf=requestAnimationFrame(()=>{bgRaf=null;renderBg();});}
+function imgDown(e,el){bgDrag={sx:e.clientX,sy:e.clientY,ox:state.bgX,oy:state.bgY};if(el){try{el.setPointerCapture(e.pointerId);}catch(_){}}e.preventDefault();}
+bgLayer.addEventListener('pointerdown',e=>{if(state.bgEdit&&bgImgEl)imgDown(e,bgImgEl);});
+bgSelect.querySelector('.mv').addEventListener('pointerdown',e=>{imgDown(e,bgSelect);e.stopPropagation();});
+$$('#bgSelect .h').forEach(h=>h.addEventListener('pointerdown',e=>{bgHandle={sx:e.clientX,sy:e.clientY,os:state.bgScale};try{h.setPointerCapture(e.pointerId);}catch(_){}e.stopPropagation();e.preventDefault();}));
+window.addEventListener('pointermove',e=>{if(!bgDrag&&!bgHandle)return;const z=state.zoom||curZoom()||1;if(bgDrag){state.bgX=bgDrag.ox+(e.clientX-bgDrag.sx)/z;state.bgY=bgDrag.oy+(e.clientY-bgDrag.sy)/z;scheduleBg();}if(bgHandle){const d=((e.clientX-bgHandle.sx)+(e.clientY-bgHandle.sy))/2;let ns=bgHandle.os*(1+d/200);ns=Math.max(.05,Math.min(8,ns));state.bgScale=ns;$('#bgScale').value=Math.round(ns*100);$('#bgScaleV').textContent=Math.round(ns*100)+'%';scheduleBg();}},{passive:false});
 window.addEventListener('pointerup',()=>{bgDrag=null;bgHandle=null;});
 $('#pickImg').addEventListener('click',()=>$('#imgFile').click());
 $('#imgFile').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{state.bg=ev.target.result;bgImgEl=null;state.bgX=0;state.bgY=0;renderBg();setBgEdit(true);if(isMobile())closeSheet();};r.readAsDataURL(f);});
@@ -644,7 +653,40 @@ $('#font').addEventListener('change',e=>{state.font=e.target.value;applyTextStyl
 $('#ratioChips').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;$('#ratioChips .chip.on')?.classList.remove('on');b.classList.add('on');state.ratio=b.dataset.r;applyCanvas();});
 $('#themePills').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$$('#themePills button').forEach(x=>x.classList.remove('on'));b.classList.add('on');applyTheme(b.dataset.t);});
 
-$('#exportBtn').addEventListener('click',async()=>{const btn=$('#exportBtn'),old=btn.textContent;btn.textContent='저장 중...';btn.disabled=true;document.body.classList.add('no-ui');hideFmtBar();const wasBgSel=state.bgEdit;bgSelect.classList.remove('on');const wasNote=selNote;if(selNote)selNote.classList.remove('sel');const savedZoom=outer.style.transform;outer.style.transform='scale(1)';const tip=flow.querySelector('.empty-tip');if(tip)tip.style.display='none';try{const canvas=await html2canvas(canvasEl,{scale:+$('#scale').value,backgroundColor:state.board,useCORS:true,logging:false});const a=document.createElement('a');a.download='발췌_'+Date.now()+'.png';a.href=canvas.toDataURL('image/png');a.click();}catch(err){alert('저장 실패: '+err.message);}finally{outer.style.transform=savedZoom;if(tip)tip.style.display='';document.body.classList.remove('no-ui');if(wasBgSel)positionBgSelect();if(wasNote){selNote=wasNote;selNote.classList.add('sel');}btn.textContent=old;btn.disabled=false;}});
+$('#exportBtn').addEventListener('click',async()=>{
+  const btn=$('#exportBtn'),old=btn.textContent;btn.textContent='저장 중...';btn.disabled=true;
+  document.body.classList.add('no-ui');hideFmtBar();
+  const wasBgSel=state.bgEdit;bgSelect.classList.remove('on');
+  const wasNote=selNote;if(selNote)selNote.classList.remove('sel');
+  const savedZoom=outer.style.transform;outer.style.transform='scale(1)';
+  const tip=flow.querySelector('.empty-tip');if(tip)tip.style.display='none';
+  try{
+    if(document.fonts&&document.fonts.ready)await document.fonts.ready;
+    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+    const W=canvasEl.offsetWidth,H=canvasEl.offsetHeight;
+    const canvas=await html2canvas(canvasEl,{
+      scale:+$('#scale').value,
+      backgroundColor:state.board,
+      useCORS:true,logging:false,
+      width:W,height:H,windowWidth:W,windowHeight:H,
+      scrollX:0,scrollY:0,
+      onclone:(doc)=>{
+        const f=doc.getElementById('flow');
+        if(f){
+          f.style.width=W+'px';
+          // letter-spacing in em rounds badly in html2canvas; convert to fixed px
+          const lsPx=Math.round(state.ls/100*state.fSize);
+          f.style.letterSpacing=lsPx+'px';
+          f.style.wordBreak='keep-all';
+          f.style.overflowWrap='break-word';
+        }
+        doc.querySelectorAll('.note').forEach(n=>{n.style.maxWidth='none';});
+      }
+    });
+    const a=document.createElement('a');a.download='발췌_'+Date.now()+'.png';a.href=canvas.toDataURL('image/png');a.click();
+  }catch(err){alert('저장 실패: '+err.message);}
+  finally{outer.style.transform=savedZoom;if(tip)tip.style.display='';document.body.classList.remove('no-ui');if(wasBgSel)positionBgSelect();if(wasNote){selNote=wasNote;selNote.classList.add('sel');}btn.textContent=old;btn.disabled=false;}
+});
 
 const sidebar=$('#sidebar');
 function openSheet(panel){sidebar.classList.add('open');if(panel){$$('.sec').forEach(s=>s.classList.toggle('closed',s.dataset.panel!==panel));const tgt=$(`.sec[data-panel="${panel}"]`);if(tgt)setTimeout(()=>$('#sideScroll').scrollTo({top:tgt.offsetTop-4,behavior:'smooth'}),60);}$$('#tabbar button').forEach(b=>b.classList.toggle('active',b.dataset.go===panel));}
@@ -657,7 +699,7 @@ $('#grip').addEventListener('pointerdown',e=>{gripStart=e.clientY;gripMoved=0;si
 $('#grip').addEventListener('pointermove',e=>{if(gripStart===null)return;gripMoved=Math.max(0,e.clientY-gripStart);sidebar.style.transform=`translateY(${gripMoved}px)`;});
 $('#grip').addEventListener('pointerup',e=>{if(gripStart===null)return;sidebar.style.transition='';sidebar.style.transform='';if(gripMoved>90)closeSheet();gripStart=null;try{$('#grip').releasePointerCapture(e.pointerId);}catch(_){}});
 /* tap on the preview area closes the sheet on mobile */
-$('#stage').addEventListener('pointerdown',()=>{if(isMobile()&&sidebar.classList.contains('open'))closeSheet();});
+$('#stage').addEventListener('pointerdown',e=>{if(state.bgEdit)return;if(isMobile()&&sidebar.classList.contains('open'))closeSheet();});
 
 buildPalGrid();buildRecent();refreshSwatches();$('#fmtHlSw').style.background=state.hlColor;$('#fmtTcSw').style.background=state.noteFg;
 $('#src').value=`@Che ci fai qui, piccola?
