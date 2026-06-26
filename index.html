@@ -140,7 +140,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
 .text-flow.v-top{top:0}
 .text-flow.v-mid{top:50%;transform:translateY(-50%)}
 .text-flow.v-bot{bottom:0}
-.text-flow p{margin:0 0 1em}
+.text-flow p{margin:0 0 var(--pgap,14px)}
 .text-flow p:last-child{margin-bottom:0}
 .narr-italic .m-narr{font-style:italic}
 .note{position:absolute;z-index:6;min-width:70px;max-width:300px;padding:8px 11px;border-radius:8px;font-family:'Nanum Gothic',sans-serif;font-size:13px;line-height:1.5}
@@ -247,6 +247,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
         <div class="slider-row"><label>행간</label><input type="range" id="lh" min="120" max="280" value="180"><span class="val" id="lhV">1.80</span><button class="rst" data-rst="lh">↺</button></div>
         <div class="slider-row"><label>자간</label><input type="range" id="ls" min="-30" max="80" value="0"><span class="val" id="lsV">0</span><button class="rst" data-rst="ls">↺</button></div>
         <div class="slider-row"><label>여백</label><input type="range" id="pad" min="12" max="100" value="40"><span class="val" id="padV">40</span><button class="rst" data-rst="pad">↺</button></div>
+        <div class="slider-row"><label>문단 간격</label><input type="range" id="paraGap" min="0" max="40" value="14"><span class="val" id="paraGapV">14</span><button class="rst" data-rst="paraGap">↺</button></div>
       </div>
     </div>
 
@@ -356,7 +357,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
 <script>
 const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
 const isMobile=()=>window.matchMedia('(max-width:860px)').matches;
-const DEFAULTS={hlOpac:60,fSize:11,lh:180,ls:0,pad:40,bgScale:100,bgOpac:60,cw:560,noteSize:7};
+const DEFAULTS={hlOpac:60,fSize:11,lh:180,ls:0,pad:40,paraGap:14,bgScale:100,bgOpac:60,cw:560,noteSize:7};
 const FONTS=[['고딕 (기본)',"'Noto Sans KR',sans-serif"],['나눔고딕',"'Nanum Gothic',sans-serif"],['나눔바른고딕',"'Nanum Gothic','Noto Sans KR',sans-serif"],['IBM Plex 고딕',"'IBM Plex Sans KR',sans-serif"],['명조 (나눔)',"'Nanum Myeongjo',serif"],['본명조',"'Noto Serif KR',serif"],['함렛 세리프',"'Hahmlet',serif"],['고운돋움',"'Gowun Dodum',sans-serif"],['고운바탕',"'Gowun Batang',serif"],['손글씨 개구',"'Gaegu',cursive"],['나눔손글씨 펜',"'Nanum Pen Script',cursive"]];
 const fontSel=$('#font'),noteFontSel=$('#noteFont');
 FONTS.forEach(([n,v])=>{fontSel.insertAdjacentHTML('beforeend',`<option value="${v}">${n}</option>`);noteFontSel.insertAdjacentHTML('beforeend',`<option value="${v}">${n}</option>`);});
@@ -364,7 +365,7 @@ noteFontSel.value="'Nanum Gothic','Noto Sans KR',sans-serif";
 const PALETTE=['#FFFFFF','#F2F2F2','#D9D9D9','#BFBFBF','#999999','#666666','#404040','#1A1A1A','#000000','#B3B3B3','#FBD3D3','#FCE3C9','#FBF3C4','#E4F3C9','#CDEFD6','#C9EEF0','#CFE0FB','#D9D2F7','#F0D4F2','#F7D7E6','#F49B9B','#F5BE84','#F0DC72','#BFE08A','#8FD8A8','#82CFD6','#8FB6F0','#A99CE6','#D89BE0','#E89CBE'];
 const HL_PASTEL=['#FFF3A8','#FFD6C4','#C8F2D4','#C4E4FB','#E5D2F7','#FBD3E2'];
 const HL_MUTED=['#D4C77A','#D1A78C','#9CC4A6','#90A8C2','#B09CC2','#C29CAC'];
-const state={ratio:'3:4',cw:560,pad:40,fSize:11,lh:1.8,ls:0,font:"'Noto Sans KR',sans-serif",cDia:'#FFFFFF',cNarr:'#B3B3B3',cTrans:'#B3B3B3',showQuotes:false,narrItalic:false,hlColor:'#FFF3A8',hlOpac:.6,vAlign:'mid',hAlign:'left',bg:null,bgScale:1,bgOpac:.6,bgX:0,bgY:0,board:'#1A1A1A',bgEdit:false,noteFont:"'Nanum Gothic','Noto Sans KR',sans-serif",noteBg:'#FFF3A8',noteFg:'#999999',noteBgOn:false,noteArrow:false,noteSize:7,theme:'dark',zoom:null,recent:[]};
+const state={ratio:'3:4',cw:560,pad:40,paraGap:14,fSize:11,lh:1.8,ls:0,font:"'Noto Sans KR',sans-serif",cDia:'#FFFFFF',cNarr:'#B3B3B3',cTrans:'#B3B3B3',showQuotes:false,narrItalic:false,hlColor:'#FFF3A8',hlOpac:.6,vAlign:'mid',hAlign:'left',bg:null,bgScale:1,bgOpac:.6,bgX:0,bgY:0,board:'#1A1A1A',bgEdit:false,noteFont:"'Nanum Gothic','Noto Sans KR',sans-serif",noteBg:'#FFF3A8',noteFg:'#999999',noteBgOn:false,noteArrow:false,noteSize:7,theme:'dark',zoom:null,recent:[]};
 
 function hexToRgba(hex,a){const h=hex.replace('#','');const f=h.length===3?h.split('').map(x=>x+x).join(''):h;const n=parseInt(f,16);return`rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;}
 function applyTheme(t){state.theme=t;if(t==='dark'){state.board='#1A1A1A';state.cDia='#FFFFFF';state.cNarr='#B3B3B3';state.cTrans='#B3B3B3';}else{state.board='#FFFFFF';state.cDia='#1A1A1A';state.cNarr='#8A8A8A';state.cTrans='#9A9A9A';}refreshSwatches();applyCanvas();applyTextStyles();}
@@ -412,7 +413,7 @@ $('#src').addEventListener('input',()=>{if(!autoApply)return;clearTimeout(buildT
 $('#applyBtn').addEventListener('click',()=>{buildFromMarkup();const b=$('#applyBtn');const t=b.textContent;b.textContent='✓ 반영됨';setTimeout(()=>b.textContent=t,900);});
 flow.setAttribute('contenteditable','true');flow.style.userSelect='text';
 
-function applyTextStyles(){flow.style.setProperty('--pad',state.pad+'px');flow.style.fontSize=state.fSize+'px';flow.style.lineHeight=state.lh;flow.style.letterSpacing=state.ls/100+'em';flow.style.fontFamily=state.font;flow.style.textAlign=state.hAlign;flow.classList.toggle('narr-italic',state.narrItalic);flow.querySelectorAll('.m-narr').forEach(e=>e.style.color=state.cNarr);flow.querySelectorAll('.m-dia').forEach(e=>e.style.color=state.cDia);flow.querySelectorAll('.m-orig').forEach(e=>e.style.color=state.cDia);flow.querySelectorAll('.m-trans').forEach(e=>{e.style.color=state.cTrans;e.style.fontStyle='italic';e.style.fontSize='.82em';});}
+function applyTextStyles(){flow.style.setProperty('--pad',state.pad+'px');flow.style.setProperty('--pgap',state.paraGap+'px');flow.style.fontSize=state.fSize+'px';flow.style.lineHeight=state.lh;flow.style.letterSpacing=state.ls/100+'em';flow.style.fontFamily=state.font;flow.style.textAlign=state.hAlign;flow.classList.toggle('narr-italic',state.narrItalic);flow.querySelectorAll('.m-narr').forEach(e=>e.style.color=state.cNarr);flow.querySelectorAll('.m-dia').forEach(e=>e.style.color=state.cDia);flow.querySelectorAll('.m-orig').forEach(e=>e.style.color=state.cDia);flow.querySelectorAll('.m-trans').forEach(e=>{e.style.color=state.cTrans;e.style.fontStyle='italic';e.style.fontSize='.82em';});}
 
 $('#vAlign').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$$('#vAlign button').forEach(x=>x.classList.remove('on'));b.classList.add('on');state.vAlign=b.dataset.v;flow.classList.remove('v-top','v-mid','v-bot');flow.classList.add('v-'+state.vAlign);});
 $('#hAlign').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const a=b.dataset.a;const sel=window.getSelection();if(sel.rangeCount&&!sel.isCollapsed&&flow.contains(sel.getRangeAt(0).commonAncestorContainer)){const range=sel.getRangeAt(0);const ps=new Set();flow.querySelectorAll('p').forEach(p=>{if(range.intersectsNode(p))ps.add(p);});if(ps.size)ps.forEach(p=>p.style.textAlign=a);}else{$$('#hAlign button').forEach(x=>x.classList.remove('on'));b.classList.add('on');state.hAlign=a;flow.style.textAlign=a;flow.querySelectorAll('p').forEach(p=>p.style.textAlign='');}});
@@ -651,6 +652,7 @@ bindRange('fSize',()=>{state.fSize=+$('#fSize').value;$('#fSizeV').textContent=s
 bindRange('lh',()=>{state.lh=+$('#lh').value/100;$('#lhV').textContent=state.lh.toFixed(2);applyTextStyles();});
 bindRange('ls',()=>{state.ls=+$('#ls').value;$('#lsV').textContent=state.ls;applyTextStyles();});
 bindRange('pad',()=>{state.pad=+$('#pad').value;$('#padV').textContent=state.pad;applyTextStyles();});
+bindRange('paraGap',()=>{state.paraGap=+$('#paraGap').value;$('#paraGapV').textContent=state.paraGap;applyTextStyles();});
 bindRange('cw',()=>{state.cw=+$('#cw').value;$('#cwV').textContent=state.cw;applyCanvas();});
 bindRange('bgScale',()=>{state.bgScale=+$('#bgScale').value/100;$('#bgScaleV').textContent=$('#bgScale').value+'%';renderBg();});
 bindRange('bgOpac',()=>{state.bgOpac=+$('#bgOpac').value/100;$('#bgOpacV').textContent=$('#bgOpac').value+'%';renderBg();});
