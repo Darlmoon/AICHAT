@@ -132,6 +132,11 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
 .sel-box .h.br{right:-8px;bottom:-8px;cursor:nwse-resize}
 .sel-box .mv{position:absolute;inset:0;pointer-events:auto;cursor:move}
 .sel-box .tag{position:absolute;left:50%;top:-22px;transform:translateX(-50%);background:var(--accent);color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;white-space:nowrap;pointer-events:none}
+.guide{position:absolute;z-index:28;pointer-events:none;display:none;background:#ff3b7f;box-shadow:0 0 0 .5px rgba(255,59,127,.4)}
+.guide.on{display:block}
+.guide-v{top:0;bottom:0;width:1px;left:50%}
+.guide-h{left:0;right:0;height:1px;top:50%}
+.no-ui .guide{display:none !important}
 #canvas.bg-edit .content{pointer-events:none}
 #canvas.bg-edit .bg-layer{z-index:25;touch-action:none}
 #canvas.bg-edit{touch-action:none}
@@ -270,8 +275,12 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
     <div class="sec" data-panel="ratio">
       <button class="sec-head" data-sec>비율 & 크기 <span class="chev">▾</span></button>
       <div class="sec-body">
-        <label class="f">비율</label>
+        <label class="f">비율 <span style="color:var(--ink-faint);font-weight:400">(같은 칩 다시 누르면 가로↔세로 전환)</span></label>
         <div class="chips" id="ratioChips"><button class="chip" data-r="1:1">1:1</button><button class="chip" data-r="3:2">3:2</button><button class="chip on" data-r="3:4">3:4</button><button class="chip" data-r="9:16">9:16</button><button class="chip" data-r="auto">자동</button></div>
+        <div class="row" style="display:flex;gap:6px;align-items:center;margin-top:8px">
+          <input type="text" id="ratioInput" placeholder="예: 5:7" style="flex:1">
+          <button class="btn" id="ratioApply" style="flex-shrink:0">적용</button>
+        </div>
         <div class="slider-row"><label>판 너비</label><input type="range" id="cw" min="360" max="900" value="560"><span class="val" id="cwV">560</span><button class="rst" data-rst="cw">↺</button></div>
       </div>
     </div>
@@ -321,6 +330,8 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
       <div id="canvas">
         <div class="bg-layer" id="bgLayer"></div>
         <div class="sel-box" id="bgSelect"><span class="mv"></span><span class="h tl"></span><span class="h tr"></span><span class="h bl"></span><span class="h br"></span><span class="tag">이미지</span></div>
+        <div class="guide guide-v" id="guideV"></div>
+        <div class="guide guide-h" id="guideH"></div>
         <div class="content" id="content"><div class="text-flow v-mid" id="flow"><div class="empty-tip">왼쪽에서 텍스트를 입력하면<br>여기에 발췌가 만들어집니다</div></div></div>
       </div>
     </div>
@@ -650,8 +661,44 @@ function imgDown(e,el){bgDrag={sx:e.clientX,sy:e.clientY,ox:state.bgX,oy:state.b
 bgLayer.addEventListener('pointerdown',e=>{if(state.bgEdit&&bgImgEl)imgDown(e,bgImgEl);});
 bgSelect.querySelector('.mv').addEventListener('pointerdown',e=>{imgDown(e,bgSelect);e.stopPropagation();});
 $$('#bgSelect .h').forEach(h=>h.addEventListener('pointerdown',e=>{bgHandle={sx:e.clientX,sy:e.clientY,os:state.bgScale};try{h.setPointerCapture(e.pointerId);}catch(_){}e.stopPropagation();e.preventDefault();}));
-window.addEventListener('pointermove',e=>{if(!bgDrag&&!bgHandle)return;const z=state.zoom||curZoom()||1;if(bgDrag){state.bgX=bgDrag.ox+(e.clientX-bgDrag.sx)/z;state.bgY=bgDrag.oy+(e.clientY-bgDrag.sy)/z;scheduleBg();}if(bgHandle){const d=((e.clientX-bgHandle.sx)+(e.clientY-bgHandle.sy))/2;let ns=bgHandle.os*(1+d/200);ns=Math.max(.05,Math.min(8,ns));state.bgScale=ns;$('#bgScale').value=Math.round(ns*100);$('#bgScaleV').textContent=Math.round(ns*100)+'%';scheduleBg();}},{passive:false});
-window.addEventListener('pointerup',()=>{bgDrag=null;bgHandle=null;});
+const SNAP=7; // 스냅 거리(px, 판 기준)
+function snapAxis(val,targets){
+  // targets: [{at, guide}] — val이 at 근처면 at으로 당기고 guide 반환
+  let best=null,bestD=SNAP+1;
+  for(const t of targets){const d=Math.abs(val-t.at);if(d<bestD){bestD=d;best=t;}}
+  if(best&&bestD<=SNAP)return best;
+  return null;
+}
+function applySnap(){
+  // returns {gx, gy} guide positions in canvas px (or null), and mutates bgX/bgY
+  const cw=canvasEl.clientWidth,ch=canvasEl.clientHeight;
+  let showV=null,showH=null;
+  if(natW){
+    const w=natW*state.bgScale,h=natH*state.bgScale;
+    // bgX: image-center-x in canvas = cw/2 + bgX. 
+    //   중앙 → bgX=0 ; 왼쪽 가장자리 맞춤 → bgX = w/2 - cw/2 ; 오른쪽 → bgX = cw/2 - w/2
+    const tX=[
+      {at:0,g:cw/2},
+      {at:(w/2 - cw/2),g:0},
+      {at:(cw/2 - w/2),g:cw}
+    ];
+    const tY=[
+      {at:0,g:ch/2},
+      {at:(h/2 - ch/2),g:0},
+      {at:(ch/2 - h/2),g:ch}
+    ];
+    const sx=snapAxis(state.bgX,tX);
+    const sy=snapAxis(state.bgY,tY);
+    if(sx){state.bgX=sx.at;showV=sx.g;}
+    if(sy){state.bgY=sy.at;showH=sy.g;}
+  }
+  const gv=$('#guideV'),gh=$('#guideH');
+  if(showV!==null){gv.style.left=showV+'px';gv.classList.add('on');}else gv.classList.remove('on');
+  if(showH!==null){gh.style.top=showH+'px';gh.classList.add('on');}else gh.classList.remove('on');
+}
+function hideGuides(){$('#guideV').classList.remove('on');$('#guideH').classList.remove('on');}
+window.addEventListener('pointermove',e=>{if(!bgDrag&&!bgHandle)return;const z=state.zoom||curZoom()||1;if(bgDrag){state.bgX=bgDrag.ox+(e.clientX-bgDrag.sx)/z;state.bgY=bgDrag.oy+(e.clientY-bgDrag.sy)/z;applySnap();scheduleBg();}if(bgHandle){const d=((e.clientX-bgHandle.sx)+(e.clientY-bgHandle.sy))/2;let ns=bgHandle.os*(1+d/200);ns=Math.max(.05,Math.min(8,ns));state.bgScale=ns;$('#bgScale').value=Math.round(ns*100);$('#bgScaleV').textContent=Math.round(ns*100)+'%';scheduleBg();}},{passive:false});
+window.addEventListener('pointerup',()=>{bgDrag=null;bgHandle=null;hideGuides();});
 $('#pickImg').addEventListener('click',()=>$('#imgFile').click());
 $('#imgFile').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{state.bg=ev.target.result;bgImgEl=null;state.bgX=0;state.bgY=0;renderBg();setBgEdit(true);if(isMobile())closeSheet();};r.readAsDataURL(f);});
 $('#bgCenter').addEventListener('click',()=>{state.bgX=0;state.bgY=0;renderBg();});
@@ -772,7 +819,33 @@ bindRange('noteSize',()=>{state.noteSize=+$('#noteSize').value;$('#noteSizeV').t
 $('#showQuotes').addEventListener('change',e=>{if(hasManualFormatting()&&!confirm('따옴표 표시를 바꾸면 본문이 다시 그려져 수동 서식이 사라집니다. 계속할까요?')){e.target.checked=!e.target.checked;return;}state.showQuotes=e.target.checked;pushHistory();buildFromMarkup();});
 $('#narrItalic').addEventListener('change',e=>{state.narrItalic=e.target.checked;applyTextStyles();});
 $('#font').addEventListener('change',e=>{state.font=e.target.value;applyTextStyles();});
-$('#ratioChips').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;$('#ratioChips .chip.on')?.classList.remove('on');b.classList.add('on');state.ratio=b.dataset.r;applyCanvas();});
+function setRatio(r){
+  state.ratio=r;
+  // sync chip highlight: match either orientation of the base chip
+  $$('#ratioChips .chip').forEach(c=>{
+    const d=c.dataset.r;
+    const flipped=d.includes(':')?d.split(':').reverse().join(':'):d;
+    c.classList.toggle('on',d===r||flipped===r);
+  });
+  applyCanvas();
+}
+$('#ratioChips').addEventListener('click',e=>{
+  const b=e.target.closest('.chip');if(!b)return;
+  const base=b.dataset.r;
+  if(base==='auto'||base==='1:1'){setRatio(base);return;}
+  const flipped=base.split(':').reverse().join(':');
+  // if current is this chip's base orientation, flip; otherwise use base
+  setRatio(state.ratio===base?flipped:base);
+});
+function applyRatioInput(){
+  let v=$('#ratioInput').value.trim().replace(/\s/g,'');
+  const m=v.match(/^(\d+(?:\.\d+)?):(\d+(?:\.\d+)?)$/);
+  if(!m||+m[1]<=0||+m[2]<=0){$('#ratioInput').style.borderColor='#e05a5a';return;}
+  $('#ratioInput').style.borderColor='';
+  setRatio(m[1]+':'+m[2]);
+}
+$('#ratioApply').addEventListener('click',applyRatioInput);
+$('#ratioInput').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();applyRatioInput();}});
 $('#themePills').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$$('#themePills button').forEach(x=>x.classList.remove('on'));b.classList.add('on');applyTheme(b.dataset.t);});
 
 $('#exportBtn').addEventListener('click',async()=>{
@@ -863,7 +936,7 @@ function applyWork(o){
   $('#cw').value=state.cw;$('#cwV').textContent=state.cw;
   $('#bgScale').value=Math.round(state.bgScale*100);$('#bgScaleV').textContent=Math.round(state.bgScale*100)+'%';
   $('#bgOpac').value=Math.round(state.bgOpac*100);$('#bgOpacV').textContent=Math.round(state.bgOpac*100)+'%';
-  $$('#ratioChips .chip').forEach(c=>c.classList.toggle('on',c.dataset.r===state.ratio));
+  $$('#ratioChips .chip').forEach(c=>{const d=c.dataset.r;const fl=d.includes(':')?d.split(':').reverse().join(':'):d;c.classList.toggle('on',d===state.ratio||fl===state.ratio);});
   $$('#vAlign button').forEach(b=>b.classList.toggle('on',b.dataset.v===state.vAlign));
   $$('#hAlign button').forEach(b=>b.classList.toggle('on',b.dataset.a===state.hAlign));
   $$('#themePills button').forEach(b=>b.classList.toggle('on',b.dataset.t===state.theme));
