@@ -169,6 +169,12 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
 .fmt-bar .sep{width:1px;height:20px;background:var(--line);margin:0 2px}
 .fmt-bar .hlsw{width:18px;height:18px;border-radius:4px;border:1px solid rgba(0,0,0,.15)}
 .hl-mark{border-radius:0;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.mode-tab{flex:1;border:none;background:none;color:var(--ink-faint);font-family:inherit;font-size:12.5px;font-weight:600;padding:11px 0;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:.15s}
+.mode-tab:hover{color:var(--ink-soft)}
+.mode-tab.on{color:var(--accent);border-bottom-color:var(--accent)}
+.html-only{display:none}
+body.mode-html .text-only{display:none}
+body.mode-html .html-only{display:block}
 .mini-pal{position:fixed;z-index:310;display:none;background:var(--panel);border:1px solid var(--line);border-radius:9px;box-shadow:var(--shadow);padding:8px;width:182px}
 .mini-pal.on{display:block}
 .mini-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:4px}
@@ -213,8 +219,13 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
       <button class="sheet-close mobile-only" id="sheetClose" style="display:none;width:32px;height:32px;border:1px solid var(--field-line);border-radius:8px;background:var(--field-bg);color:var(--ink);font-size:16px;cursor:pointer;align-items:center;justify-content:center">✕</button>
     </div>
   </div>
+  <div style="display:flex;gap:0;padding:0 20px;border-bottom:1px solid var(--line)">
+    <button class="mode-tab on" data-mode="text" id="modeText">✎ 텍스트 발췌</button>
+    <button class="mode-tab" data-mode="html" id="modeHtml">&lt;/&gt; HTML 발췌</button>
+  </div>
   <div class="side-scroll" id="sideScroll">
 
+    <div class="text-only">
     <div class="sec" data-panel="text">
       <button class="sec-head" data-sec>본문 텍스트 <span class="chev">▾</span></button>
       <div class="sec-body">
@@ -312,6 +323,48 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
         <div class="hint">프리셋은 이 브라우저에 저장됩니다.</div>
       </div>
     </div>
+    </div><!-- /text-only -->
+
+    <div class="html-only">
+      <div class="sec" data-panel="htmlcode">
+        <button class="sec-head" data-sec>HTML 코드 <span class="chev">▾</span></button>
+        <div class="sec-body">
+          <label class="f">코드 붙여넣기</label>
+          <textarea id="htmlSrc" spellcheck="false" placeholder="<div>...</div> 형태의 HTML을 붙여넣으세요" style="min-height:180px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px"></textarea>
+          <button class="btn full primary" id="htmlApply" style="margin-top:8px">✓ 렌더링</button>
+          <div class="hint">AI가 준 HTML을 그대로 붙여넣고 렌더링을 누르면 오른쪽에 결과가 나타납니다. 코드 안에 내용이 모두 포함된 HTML이 가장 깔끔하게 저장돼요.</div>
+        </div>
+      </div>
+      <div class="sec" data-panel="htmlsize">
+        <button class="sec-head" data-sec>크기 & 여백 <span class="chev">▾</span></button>
+        <div class="sec-body">
+          <label class="f">비율 <span style="color:var(--ink-faint);font-weight:400">(같은 칩 다시 누르면 가로↔세로)</span></label>
+          <div class="chips" id="htmlRatioChips">
+            <button class="chip on" data-r="auto">자동</button>
+            <button class="chip" data-r="1:1">1:1</button>
+            <button class="chip" data-r="3:2">3:2</button>
+            <button class="chip" data-r="3:4">3:4</button>
+            <button class="chip" data-r="9:16">9:16</button>
+          </div>
+          <div class="row" style="display:flex;gap:6px;align-items:center;margin-top:8px">
+            <input type="text" id="htmlRatioInput" placeholder="예: 5:7" style="flex:1">
+            <button class="btn" id="htmlRatioApply" style="flex-shrink:0">적용</button>
+          </div>
+          <div class="hint" style="margin-bottom:6px">자동 = 내용 높이에 맞춤. 비율을 고르면 그 높이로 고정돼요(넘치면 잘리고 모자라면 배경으로 채움).</div>
+          <div class="slider-row"><label>폭</label><input type="range" id="htmlW" min="320" max="1200" value="600"><span class="val" id="htmlWV">600</span><button class="rst" data-rst="htmlW">↺</button></div>
+          <div class="slider-row"><label>높이 여유</label><input type="range" id="htmlPad" min="0" max="80" value="0"><span class="val" id="htmlPadV">0</span><button class="rst" data-rst="htmlPad">↺</button></div>
+          <label class="f">배경</label>
+          <div class="chips" id="htmlBgChips">
+            <button class="chip on" data-bg="transparent">투명</button>
+            <button class="chip" data-bg="#ffffff">흰색</button>
+            <button class="chip" data-bg="#1a1a1a">검정</button>
+            <button class="chip" data-bg="custom">직접</button>
+          </div>
+          <div class="color-row" style="margin-top:8px"><label>직접 배경색</label><button class="swatch-btn" id="sw-htmlBg"></button></div>
+          <div class="hint">렌더된 HTML이 투명 배경이면 여기 배경색이 뒤에 깔립니다.</div>
+        </div>
+      </div>
+    </div><!-- /html-only -->
 
   </div>
 </aside>
@@ -326,13 +379,19 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
     <button class="btn primary" id="exportBtn" style="white-space:nowrap">↓ 저장</button>
   </div>
   <div class="stage" id="stage">
-    <div class="canvas-outer" id="canvasOuter">
+    <div class="canvas-outer text-only" id="canvasOuter">
       <div id="canvas">
         <div class="bg-layer" id="bgLayer"></div>
         <div class="sel-box" id="bgSelect"><span class="mv"></span><span class="h tl"></span><span class="h tr"></span><span class="h bl"></span><span class="h br"></span><span class="tag">이미지</span></div>
         <div class="guide guide-v" id="guideV"></div>
         <div class="guide guide-h" id="guideH"></div>
         <div class="content" id="content"><div class="text-flow v-mid" id="flow"><div class="empty-tip">왼쪽에서 텍스트를 입력하면<br>여기에 발췌가 만들어집니다</div></div></div>
+      </div>
+    </div>
+    <div class="canvas-outer html-only" id="htmlOuter">
+      <div id="htmlCanvas" style="position:relative;overflow:hidden;box-shadow:var(--shadow);background:transparent">
+        <iframe id="htmlFrame" style="border:none;display:block;width:600px;background:transparent" scrolling="no"></iframe>
+        <div id="htmlEmpty" class="empty-tip" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">왼쪽에 HTML 코드를 붙여넣고<br>렌더링을 누르세요</div>
       </div>
     </div>
   </div>
@@ -389,7 +448,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
 <script>
 const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
 const isMobile=()=>window.matchMedia('(max-width:860px)').matches;
-const DEFAULTS={hlOpac:60,fSize:11,lh:180,ls:0,pad:40,paraGap:14,bgScale:100,bgOpac:60,cw:560,noteSize:7};
+const DEFAULTS={hlOpac:60,fSize:11,lh:180,ls:0,pad:40,paraGap:14,bgScale:100,bgOpac:60,cw:560,noteSize:7,htmlW:600,htmlPad:0};
 const FONTS=[['고딕 (기본)',"'Noto Sans KR',sans-serif"],['나눔고딕',"'Nanum Gothic',sans-serif"],['나눔바른고딕',"'Nanum Gothic','Noto Sans KR',sans-serif"],['IBM Plex 고딕',"'IBM Plex Sans KR',sans-serif"],['명조 (나눔)',"'Nanum Myeongjo',serif"],['본명조',"'Noto Serif KR',serif"],['함렛 세리프',"'Hahmlet',serif"],['고운돋움',"'Gowun Dodum',sans-serif"],['고운바탕',"'Gowun Batang',serif"],['손글씨 개구',"'Gaegu',cursive"],['나눔손글씨 펜',"'Nanum Pen Script',cursive"]];
 const fontSel=$('#font'),noteFontSel=$('#noteFont');
 FONTS.forEach(([n,v])=>{fontSel.insertAdjacentHTML('beforeend',`<option value="${v}">${n}</option>`);noteFontSel.insertAdjacentHTML('beforeend',`<option value="${v}">${n}</option>`);});
@@ -416,7 +475,7 @@ function rgbToHex(r,g,b){const c=v=>Math.max(0,Math.min(255,+v||0)).toString(16)
 function syncPopInputs(c){$('#popBig').style.background=c;$('#hexIn').value=c.replace('#','');$('#nativeIn').value=c.length===4?'#'+c.slice(1).split('').map(x=>x+x).join(''):c;const[r,g,b]=hexToRgb(c);$('#rIn').value=r;$('#gIn').value=g;$('#bIn').value=b;$$('#palGrid .sw').forEach(s=>s.classList.toggle('sel',s.dataset.c.toUpperCase()===c.toUpperCase()));}
 function setColor(c,addRecent=true){c=c.toUpperCase();state[popTarget]=c;syncPopInputs(c);if(addRecent)pushRecent(c);applyColorEffect(popTarget);}
 function pushRecent(c){c=c.toUpperCase();state.recent=[c,...state.recent.filter(x=>x!==c)].slice(0,10);buildRecent();}
-function applyColorEffect(key){refreshSwatches();if(key==='hlColor'){$('#fmtHlSw').style.background=state.hlColor;return;}if(key==='noteFg'){$('#fmtTcSw').style.background=state.noteFg;}if(key==='board')applyCanvas();else if(key.startsWith('note'))updateNotesStyle();else applyTextStyles();}
+function applyColorEffect(key){refreshSwatches();if(key==='hlColor'){$('#fmtHlSw').style.background=state.hlColor;return;}if(key==='noteFg'){$('#fmtTcSw').style.background=state.noteFg;}if(key==='htmlBgCustom'){$('#sw-htmlBg').style.background=state.htmlBgCustom;if(typeof htmlState!=='undefined'){htmlState.bg=state.htmlBgCustom;$$('#htmlBgChips .chip').forEach(x=>x.classList.remove('on'));sizeHtmlFrame();}return;}if(key==='board')applyCanvas();else if(key.startsWith('note'))updateNotesStyle();else applyTextStyles();}
 function openPop(key,btn,name){popTarget=key;$('#popName').textContent=name;syncPopInputs(state[key]);popMask.classList.add('on');const r=btn.getBoundingClientRect();let left,top;if(isMobile()){left=(window.innerWidth-280)/2;top=Math.max(60,(window.innerHeight-360)/2);}else{left=r.left-210;top=r.bottom+6;if(left<8)left=8;if(top+300>window.innerHeight)top=Math.max(8,r.top-306);}pop.style.left=left+'px';pop.style.top=top+'px';}
 popMask.addEventListener('click',e=>{if(e.target===popMask)popMask.classList.remove('on');});
 $('#hexIn').addEventListener('input',e=>{let v=e.target.value.replace(/[^0-9a-fA-F]/g,'');if(v.length===6||v.length===3)setColor('#'+v);});
@@ -869,6 +928,7 @@ function splitHighlightsByLine(){
   });
 }
 $('#exportBtn').addEventListener('click',async()=>{
+  if(curMode==='html'){return exportHtml();}
   const btn=$('#exportBtn'),old=btn.textContent;btn.textContent='저장 중...';btn.disabled=true;
   document.body.classList.add('no-ui');hideFmtBar();
   const wasBgSel=state.bgEdit;bgSelect.classList.remove('on');
@@ -1020,6 +1080,151 @@ $('#savePreset').addEventListener('click',()=>{
 });
 renderPresets();
 
+/* ===== HTML 발췌 모드 ===== */
+let curMode='text';
+const htmlState={w:600,pad:0,bg:'transparent',ratio:'auto'};
+function setMode(m){
+  curMode=m;
+  document.body.classList.toggle('mode-html',m==='html');
+  $$('.mode-tab').forEach(b=>b.classList.toggle('on',b.dataset.mode===m));
+  hideFmtBar();
+  fitZoomAny();
+}
+$('#modeText').addEventListener('click',()=>setMode('text'));
+$('#modeHtml').addEventListener('click',()=>setMode('html'));
+
+const htmlFrame=$('#htmlFrame'),htmlCanvas=$('#htmlCanvas');
+function renderHtml(){
+  const code=$('#htmlSrc').value;
+  $('#htmlEmpty').style.display=code.trim()?'none':'flex';
+  const doc=htmlFrame.contentDocument||htmlFrame.contentWindow.document;
+  const wrap=`<!DOCTYPE html><html><head><meta charset="utf-8"><style>html,body{margin:0;padding:0;background:transparent}*{box-sizing:border-box}</style></head><body>${code}</body></html>`;
+  doc.open();doc.write(wrap);doc.close();
+  setTimeout(sizeHtmlFrame,60);setTimeout(sizeHtmlFrame,350);
+}
+function measureContentH(w){
+  // iframe 폭을 w로 세팅하고 내용 높이 반환
+  htmlFrame.style.width=w+'px';
+  const doc=htmlFrame.contentDocument;
+  if(!doc||!doc.body)return 0;
+  return Math.max(doc.body.scrollHeight,doc.documentElement.scrollHeight);
+}
+function solveWidthForRatio(rw,rh){
+  // 목표: (w) / (contentH(w)+pad*2) ≈ rw/rh  →  폭을 키우면 높이 감소 → 이분탐색
+  const target=rw/rh;
+  let lo=htmlState.w, hi=htmlState.w;
+  // 우선 현재 폭에서 비율 확인
+  const p2=htmlState.pad*2;
+  let h=measureContentH(lo)+p2;
+  if(lo/h < target){
+    // 너무 세로로 길다 → 폭을 키워야 함. hi를 넉넉히 확장
+    hi=lo;
+    for(let i=0;i<12;i++){hi=Math.min(hi*1.5,8000);const hh=measureContentH(hi)+p2;if(hi/hh>=target)break;}
+    // 이분탐색
+    for(let i=0;i<18;i++){const mid=(lo+hi)/2;const hh=measureContentH(mid)+p2;if(mid/hh<target)lo=mid;else hi=mid;}
+    return Math.round(hi);
+  }
+  // 이미 폭이 충분(내용이 짧음) → 폭은 유지, 높이만 비율까지 배경으로 늘림
+  return htmlState.w;
+}
+function sizeHtmlFrame(){
+  try{
+    const doc=htmlFrame.contentDocument;if(!doc||!doc.body)return;
+    const p2=htmlState.pad*2;
+    let renderW=htmlState.w, boardH;
+    if(htmlState.ratio==='auto'){
+      renderW=htmlState.w;
+      const ch=measureContentH(renderW);
+      boardH=ch+p2;
+    }else{
+      const[rw,rh]=htmlState.ratio.split(':').map(Number);
+      renderW=solveWidthForRatio(rw,rh);
+      const ch=measureContentH(renderW);
+      // 목표 비율 높이 (폭 기준). 내용이 이보다 짧으면 이 높이로, 길면 내용높이로(안 잘리게)
+      const ratioH=Math.round(renderW*rh/rw);
+      boardH=Math.max(ratioH, ch+p2);
+    }
+    htmlState._renderW=renderW;htmlState._boardH=boardH;
+    htmlFrame.style.width=renderW+'px';
+    htmlFrame.style.height=(measureContentH(renderW)+p2)+'px';
+    htmlFrame.style.paddingTop=htmlState.pad+'px';htmlFrame.style.paddingBottom=htmlState.pad+'px';
+    htmlCanvas.style.width=renderW+'px';
+    htmlCanvas.style.height=boardH+'px';
+    htmlCanvas.style.overflow='hidden';
+    htmlCanvas.style.background=htmlState.bg;
+    fitZoomAny();
+  }catch(e){}
+}
+$('#htmlApply').addEventListener('click',()=>{renderHtml();if(isMobile())closeSheet();});
+bindRange('htmlW',()=>{htmlState.w=+$('#htmlW').value;$('#htmlWV').textContent=htmlState.w;sizeHtmlFrame();});
+bindRange('htmlPad',()=>{htmlState.pad=+$('#htmlPad').value;$('#htmlPadV').textContent=htmlState.pad;sizeHtmlFrame();});
+$('#htmlBgChips').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;const v=b.dataset.bg;if(v==='custom'){openPop('htmlBgCustom',$('#sw-htmlBg'),'HTML 배경색');return;}$$('#htmlBgChips .chip').forEach(x=>x.classList.remove('on'));b.classList.add('on');htmlState.bg=v;sizeHtmlFrame();});
+state.htmlBgCustom='#FFFFFF';
+$('#sw-htmlBg').addEventListener('click',()=>openPop('htmlBgCustom',$('#sw-htmlBg'),'HTML 배경색'));
+
+/* HTML 비율 */
+function setHtmlRatio(r){
+  htmlState.ratio=r;
+  $$('#htmlRatioChips .chip').forEach(c=>{const d=c.dataset.r;const fl=d.includes(':')?d.split(':').reverse().join(':'):d;c.classList.toggle('on',d===r||fl===r);});
+  sizeHtmlFrame();
+}
+$('#htmlRatioChips').addEventListener('click',e=>{
+  const b=e.target.closest('.chip');if(!b)return;
+  const base=b.dataset.r;
+  if(base==='auto'||base==='1:1'){setHtmlRatio(base);return;}
+  const flipped=base.split(':').reverse().join(':');
+  setHtmlRatio(htmlState.ratio===base?flipped:base);
+});
+function applyHtmlRatioInput(){
+  let v=$('#htmlRatioInput').value.trim().replace(/\s/g,'');
+  const m=v.match(/^(\d+(?:\.\d+)?):(\d+(?:\.\d+)?)$/);
+  if(!m||+m[1]<=0||+m[2]<=0){$('#htmlRatioInput').style.borderColor='#e05a5a';return;}
+  $('#htmlRatioInput').style.borderColor='';setHtmlRatio(m[1]+':'+m[2]);
+}
+$('#htmlRatioApply').addEventListener('click',applyHtmlRatioInput);
+$('#htmlRatioInput').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();applyHtmlRatioInput();}});
+
+function activeOuter(){return curMode==='html'?$('#htmlOuter'):outer;}
+function activeCanvasEl(){return curMode==='html'?htmlCanvas:canvasEl;}
+function fitZoomAny(){
+  const ao=activeOuter(),ac=activeCanvasEl();
+  const avail=stage.clientWidth-(isMobile()?24:80);
+  const cw=ac.offsetWidth||600;
+  const z=Math.min(1,avail/cw);
+  ao.style.transform=`scale(${z})`;
+}
+async function exportHtml(){
+  const btn=$('#exportBtn'),old=btn.textContent;btn.textContent='저장 중...';btn.disabled=true;
+  const savedT=$('#htmlOuter').style.transform;$('#htmlOuter').style.transform='scale(1)';
+  const emptyEl=$('#htmlEmpty');const wasEmpty=emptyEl.style.display;emptyEl.style.display='none';
+  try{
+    const doc=htmlFrame.contentDocument;
+    if(!doc||!doc.body||!$('#htmlSrc').value.trim()){alert('먼저 HTML을 렌더링하세요.');return;}
+    if(doc.fonts&&doc.fonts.ready)await doc.fonts.ready;
+    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+    // 최신 레이아웃 반영
+    sizeHtmlFrame();
+    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+    const W=htmlState._renderW||htmlState.w;
+    const boardH=htmlState._boardH||(Math.max(doc.body.scrollHeight,doc.documentElement.scrollHeight)+htmlState.pad*2);
+    const bg=htmlState.bg==='transparent'?null:htmlState.bg;
+    const canvas=await html2canvas(doc.body,{
+      scale:+$('#scale').value,
+      backgroundColor:bg,
+      useCORS:true,logging:false,
+      width:W,height:Math.max(doc.body.scrollHeight,doc.documentElement.scrollHeight),windowWidth:W,
+    });
+    // 최종 판(비율 높이)에 내용을 위여백 만큼 내려 그림. 판이 내용보다 크면 배경으로 채워짐(잘리지 않음)
+    const out=document.createElement('canvas');
+    const sc=+$('#scale').value;
+    out.width=W*sc;out.height=boardH*sc;
+    const ctx=out.getContext('2d');
+    if(bg){ctx.fillStyle=bg;ctx.fillRect(0,0,out.width,out.height);}
+    ctx.drawImage(canvas,0,htmlState.pad*sc);
+    const a=document.createElement('a');a.download='HTML발췌_'+Date.now()+'.png';a.href=out.toDataURL('image/png');a.click();
+  }catch(err){alert('저장 실패: '+err.message+'\n(외부 리소스를 불러오는 HTML은 캡처가 제한될 수 있어요)');}
+  finally{$('#htmlOuter').style.transform=savedT;emptyEl.style.display=wasEmpty;btn.textContent=old;btn.disabled=false;}
+}
 
 $('#src').value=`@Che ci fai qui, piccola?
 =여기서 뭐 하는 거야, 꼬마.
@@ -1030,6 +1235,7 @@ $('#src').value=`@Che ci fai qui, piccola?
 
 *그의 손이 비앙카의 어깨를 살짝 움켜쥐었다. 부드럽게, 그러나 분명한 힘이 실려 있었다.*`;
 applyTheme('dark');buildFromMarkup();applyCanvas();applyTextStyles();
+$('#sw-htmlBg').style.background=state.htmlBgCustom;
 </script>
 </body>
 </html>
