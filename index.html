@@ -50,7 +50,9 @@ textarea#src{min-height:150px;line-height:1.6;font-size:12.5px}
 textarea#note-input{min-height:54px}
 .slider-row{display:flex;align-items:center;gap:8px;margin:13px 0}
 .slider-row label{flex:0 0 56px;font-size:11px;color:var(--ink-faint);margin:0;font-weight:500}
-.slider-row .val{flex:0 0 40px;text-align:right;font-size:11px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+.slider-row .val{flex:0 0 46px;text-align:right;font-size:11px;color:var(--ink-soft);font-variant-numeric:tabular-nums;cursor:text;border-radius:4px;padding:2px 3px;border:1px solid transparent;transition:border-color .12s}
+.slider-row .val:hover{border-color:var(--field-line)}
+.slider-row .val.editing{border-color:var(--accent);color:var(--ink);outline:none;text-align:center;background:var(--field-bg)}
 .slider-row .rst{flex:0 0 24px;width:24px;height:24px;border:1px solid var(--field-line);border-radius:6px;background:var(--field-bg);color:var(--ink-faint);cursor:pointer;font-size:12px;display:inline-flex;align-items:center;justify-content:center;padding:0}
 .slider-row .rst:hover{border-color:var(--accent-soft);color:var(--accent)}
 input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:4px;border-radius:4px;background:var(--field-line);cursor:pointer}
@@ -716,6 +718,47 @@ function clampZoom(){outer.style.transform=`scale(${state.zoom})`;$('#zoomV').te
 window.addEventListener('resize',()=>{if(state.zoom===null)fitZoom();});
 
 function bindRange(id,fn){$('#'+id).addEventListener('input',fn);}
+
+/* ===== 슬라이더 값 직접 입력 =====
+   표시값(예 "180"은 행간 1.80, "60%"는 0.6)을 슬라이더 원시값으로 되돌리는 규칙 */
+const VAL_PARSE={
+  hlOpac:v=>v, fSize:v=>v, ls:v=>v, pad:v=>v, paraGap:v=>v, cw:v=>v,
+  bgScale:v=>v, bgOpac:v=>v, noteSize:v=>v,
+  lh:v=>Math.round(v*100)   // 사용자가 1.8 또는 180 입력 → 180
+};
+function editVal(span,id){
+  const el=$('#'+id);
+  span.classList.add('editing');
+  span.setAttribute('contenteditable','true');
+  // 편집 시작 시 순수 숫자만 보여줌
+  let cur=el.value;
+  if(id==='lh')cur=(el.value/100).toFixed(2);
+  span.textContent=cur;
+  span.focus();
+  const range=document.createRange();range.selectNodeContents(span);
+  const sel=window.getSelection();sel.removeAllRanges();sel.addRange(range);
+  const commit=()=>{
+    span.removeAttribute('contenteditable');span.classList.remove('editing');
+    let num=parseFloat(span.textContent.replace(/[^0-9.\-]/g,''));
+    if(isNaN(num)){el.dispatchEvent(new Event('input'));return;}
+    // lh는 1.8 처럼 입력하면 180으로, 이미 180이면 그대로
+    if(id==='lh'&&num<10)num=Math.round(num*100);
+    else if(VAL_PARSE[id])num=VAL_PARSE[id](num);
+    num=Math.max(+el.min,Math.min(+el.max,Math.round(num)));
+    el.value=num;el.dispatchEvent(new Event('input'));
+  };
+  span.onblur=commit;
+  span.onkeydown=e=>{
+    if(e.key==='Enter'){e.preventDefault();span.blur();}
+    else if(e.key==='Escape'){e.preventDefault();span.textContent='';span.blur();el.dispatchEvent(new Event('input'));}
+  };
+}
+document.querySelectorAll('.slider-row .val').forEach(span=>{
+  const row=span.closest('.slider-row');
+  const el=row.querySelector('input[type=range]');
+  if(!el)return;
+  span.addEventListener('click',()=>{if(!span.classList.contains('editing'))editVal(span,el.id);});
+});
 bindRange('fSize',()=>{state.fSize=+$('#fSize').value;$('#fSizeV').textContent=state.fSize;applyTextStyles();});
 bindRange('lh',()=>{state.lh=+$('#lh').value/100;$('#lhV').textContent=state.lh.toFixed(2);applyTextStyles();});
 bindRange('ls',()=>{state.ls=+$('#ls').value;$('#lsV').textContent=state.ls;applyTextStyles();});
