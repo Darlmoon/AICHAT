@@ -168,7 +168,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
 .fmt-bar b{font-weight:800}.fmt-bar i{font-style:italic}.fmt-bar u{text-decoration:underline}
 .fmt-bar .sep{width:1px;height:20px;background:var(--line);margin:0 2px}
 .fmt-bar .hlsw{width:18px;height:18px;border-radius:4px;border:1px solid rgba(0,0,0,.15)}
-.hl-mark{border-radius:0}
+.hl-mark{border-radius:0;-webkit-box-decoration-break:clone;box-decoration-break:clone}
 .mini-pal{position:fixed;z-index:310;display:none;background:var(--panel);border:1px solid var(--line);border-radius:9px;box-shadow:var(--shadow);padding:8px;width:182px}
 .mini-pal.on{display:block}
 .mini-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:4px}
@@ -568,7 +568,7 @@ function applyHighlight(ctx){
   const range=sel.getRangeAt(0);
   const span=document.createElement('span');
   span.className='hl-mark';
-  span.style.cssText=`background:${hexToRgba(state.hlColor,state.hlOpac)};border-radius:0;padding:0 1px;`;
+  span.style.cssText=`background:${hexToRgba(state.hlColor,state.hlOpac)};border-radius:0;-webkit-box-decoration-break:clone;box-decoration-break:clone;`;
   try{span.appendChild(range.extractContents());range.insertNode(span);}catch(e){}
 }
 function toggleHighlight(ctx){
@@ -848,6 +848,26 @@ $('#ratioApply').addEventListener('click',applyRatioInput);
 $('#ratioInput').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();applyRatioInput();}});
 $('#themePills').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$$('#themePills button').forEach(x=>x.classList.remove('on'));b.classList.add('on');applyTheme(b.dataset.t);});
 
+function splitHighlightsByLine(){
+  // 원본 flow에서 여러 줄에 걸친 형광펜을 줄 단위 span으로 분할 (캡처 번짐 방지)
+  flow.querySelectorAll('.hl-mark').forEach(mark=>{
+    const tn=mark.firstChild;
+    if(!tn||tn.nodeType!==3||mark.childNodes.length!==1)return;
+    const txt=tn.textContent;if(!txt)return;
+    const rng=document.createRange();
+    let curTop=null,buf='';const frag=document.createDocumentFragment();
+    const flushSpan=()=>{if(buf==='')return;const s=document.createElement('span');s.className='hl-mark';s.style.cssText=mark.style.cssText;s.textContent=buf;frag.appendChild(s);buf='';};
+    for(let i=0;i<txt.length;i++){
+      rng.setStart(tn,i);rng.setEnd(tn,i+1);
+      const top=Math.round(rng.getBoundingClientRect().top);
+      if(curTop===null)curTop=top;
+      if(Math.abs(top-curTop)>3){flushSpan();curTop=top;}
+      buf+=txt[i];
+    }
+    flushSpan();
+    if(frag.childNodes.length>1)mark.parentNode.replaceChild(frag,mark);
+  });
+}
 $('#exportBtn').addEventListener('click',async()=>{
   const btn=$('#exportBtn'),old=btn.textContent;btn.textContent='저장 중...';btn.disabled=true;
   document.body.classList.add('no-ui');hideFmtBar();
@@ -855,9 +875,12 @@ $('#exportBtn').addEventListener('click',async()=>{
   const wasNote=selNote;if(selNote)selNote.classList.remove('sel');
   const savedZoom=outer.style.transform;outer.style.transform='scale(1)';
   const tip=flow.querySelector('.empty-tip');if(tip)tip.style.display='none';
+  const contentBackup=$('#content').innerHTML;  // 형광펜 분할 전 원본 보관
   try{
     if(document.fonts&&document.fonts.ready)await document.fonts.ready;
     await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+    splitHighlightsByLine();
+    await new Promise(r=>requestAnimationFrame(r));
     const W=canvasEl.offsetWidth,H=canvasEl.offsetHeight;
     const canvas=await html2canvas(canvasEl,{
       scale:+$('#scale').value,
@@ -869,7 +892,6 @@ $('#exportBtn').addEventListener('click',async()=>{
         const f=doc.getElementById('flow');
         if(f){
           f.style.width=W+'px';
-          // letter-spacing in em rounds badly in html2canvas; convert to fixed px
           const lsPx=Math.round(state.ls/100*state.fSize);
           f.style.letterSpacing=lsPx+'px';
           f.style.wordBreak='keep-all';
@@ -880,7 +902,11 @@ $('#exportBtn').addEventListener('click',async()=>{
     });
     const a=document.createElement('a');a.download='발췌_'+Date.now()+'.png';a.href=canvas.toDataURL('image/png');a.click();
   }catch(err){alert('저장 실패: '+err.message);}
-  finally{outer.style.transform=savedZoom;if(tip)tip.style.display='';document.body.classList.remove('no-ui');if(wasBgSel)positionBgSelect();if(wasNote){selNote=wasNote;selNote.classList.add('sel');}btn.textContent=old;btn.disabled=false;}
+  finally{
+    // 형광펜 분할 원상복구
+    $('#content').innerHTML=contentBackup;flow=$('#flow');flow.setAttribute('contenteditable','true');flow.style.userSelect='text';rebindAfterRestore();applyTextStyles();
+    outer.style.transform=savedZoom;const tip2=flow.querySelector('.empty-tip');if(tip2)tip2.style.display='';document.body.classList.remove('no-ui');if(wasBgSel)positionBgSelect();if(wasNote){selNote=wasNote;const first=$$('#content .note')[0];}btn.textContent=old;btn.disabled=false;
+  }
 });
 
 const sidebar=$('#sidebar');
