@@ -606,7 +606,7 @@ body.ui-dark .kk-root .toggle-row label{color:#ccc;}
     <button class="on">💬 카톡</button>
   </div>
   <span style="flex:1"></span>
-  <span style="font-size:9px;color:var(--ink-faint);opacity:.7;">v6.0705-1012</span>
+  <span style="font-size:9px;color:var(--ink-faint);opacity:.7;">v6.0705-1026</span>
   <span id="autosave-ind" style="font-size:10px;color:var(--ink-faint);">자동 저장 대기</span>
   <button class="btn" style="padding:4px 8px;" id="btn-undo" onclick="undo()" title="실행취소 (Ctrl+Z)">↶</button>
   <button class="btn" style="padding:4px 8px;" id="btn-redo" onclick="redo()" title="다시실행 (Ctrl+Shift+Z)">↷</button>
@@ -3102,6 +3102,10 @@ renderCenter();
 renderPreview();
 historyStack = [kkSnapshot()]; // initial snapshot
 
+
+window.captureEpisode=captureEpisode;
+window.saveCurrentImage=saveCurrentImage;
+window.saveAllImages=saveAllImages;
 }catch(kkErr){console.error("kakao init:",kkErr);
 try{const b=document.createElement('div');b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:#c0392b;color:#fff;font-size:12px;padding:8px 14px;font-family:monospace;white-space:pre-wrap;';b.textContent='카톡 모듈 초기화 오류: '+(kkErr&&(kkErr.stack||kkErr.message)||kkErr);document.body.appendChild(b);}catch(_){}}
 </script>
