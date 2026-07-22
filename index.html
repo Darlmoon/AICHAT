@@ -636,7 +636,7 @@ body.ui-dark .kk-root .toggle-row label{color:#ccc;}
     <button class="on">💬 카톡</button>
   </div>
   <span style="flex:1"></span>
-  <span style="font-size:9px;color:var(--ink-faint);opacity:.7;">v6.0722-1447</span>
+  <span style="font-size:9px;color:var(--ink-faint);opacity:.7;">v6.0722-1459</span>
   <span id="autosave-ind" style="font-size:10px;color:var(--ink-faint);">자동 저장 대기</span>
   <button class="btn" style="padding:4px 8px;" id="btn-undo" onclick="undo()" title="실행취소 (Ctrl+Z)">↶</button>
   <button class="btn" style="padding:4px 8px;" id="btn-redo" onclick="redo()" title="다시실행 (Ctrl+Shift+Z)">↷</button>
@@ -1168,14 +1168,18 @@ function showFmtBar(){
   const ctx=editableUnderSelection();
   if(!ctx){hideFmtBar();return;}
   fmtCtx=ctx;
-  // 형광펜·글자색 모두 본문/주석 어디서나 표시
   $('#fmtHilite').style.display='';
   $('#fmtHilitePick').style.display='';
   $('#fmtTextColor').style.display='';
   $('#fmtTextColorPick').style.display='';
   updateFmtActive();
-  const rect=window.getSelection().getRangeAt(0).getBoundingClientRect();
   fmtBar.classList.add('on');
+  repositionFmtBar();
+}
+function repositionFmtBar(){
+  const sel=window.getSelection();if(!sel.rangeCount)return;
+  const rect=sel.getRangeAt(0).getBoundingClientRect();
+  if(!rect.width&&!rect.height)return;
   const bw=fmtBar.offsetWidth||230,bh=fmtBar.offsetHeight||38;
   let left=rect.left+rect.width/2-bw/2;
   left=Math.max(8,Math.min(window.innerWidth-bw-8,left));
@@ -1185,8 +1189,10 @@ function showFmtBar(){
 }
 function hideFmtBar(){fmtBar.classList.remove('on');fmtCtx=null;}
 let selTimer=null;
+let fmtApplying=false;
 document.addEventListener('selectionchange',()=>{
   if(typeof miniPal!=='undefined'&&miniPal.classList.contains('on'))return;
+  if(fmtApplying)return; // 서식 적용 직후 선택 재설정 시 툴바 유지
   const ae=document.activeElement;
   if(ae&&(ae.tagName==='TEXTAREA'||ae.tagName==='INPUT'||ae.tagName==='SELECT'))return;
   clearTimeout(selTimer);
@@ -1196,11 +1202,12 @@ document.addEventListener('selectionchange',()=>{
   },60);
 });
 function wrapInCtx(tag,style){
-  const sel=window.getSelection();if(!sel.rangeCount||sel.isCollapsed)return;
+  const sel=window.getSelection();if(!sel.rangeCount||sel.isCollapsed)return null;
   const range=sel.getRangeAt(0);
-  if(fmtCtx&&!fmtCtx.contains(range.commonAncestorContainer))return;
+  if(fmtCtx&&!fmtCtx.contains(range.commonAncestorContainer))return null;
   const span=document.createElement(tag);if(style)span.setAttribute('style',style);
-  try{span.appendChild(range.extractContents());range.insertNode(span);}catch(e){}
+  try{span.appendChild(range.extractContents());range.insertNode(span);}catch(e){return null;}
+  return span;
 }
 /* 선택 영역이 지정 태그(굵기 등)로 감싸져 있는지 */
 function selectionHasTag(tagNames){
@@ -1216,6 +1223,12 @@ function unwrapTag(ctx,tagNames){
   const sels=tagNames.join(',');
   const els=[...ctx.querySelectorAll(sels)].filter(m=>range.intersectsNode(m));
   els.forEach(m=>{const parent=m.parentNode;while(m.firstChild)parent.insertBefore(m.firstChild,m);parent.removeChild(m);parent.normalize();});
+}
+function toggleWrap(tag){
+  const map={strong:['strong','b'],em:['em','i'],u:['u']};
+  const names=map[tag];
+  if(selectionHasTag(names)){unwrapTag(fmtCtx||flow,names);return null;}
+  else{return wrapInCtx(tag);}
 }
 function alignParas(a){
   const sel=window.getSelection();if(!sel.rangeCount)return;
@@ -1247,21 +1260,15 @@ function applyQuoteColor(){
   }
   paras.forEach(p=>p.style.borderLeftColor=state.quoteColor);
 }
-function toggleWrap(tag){
-  // strong↔b, em↔i, u 모두 인식
-  const map={strong:['strong','b'],em:['em','i'],u:['u']};
-  const names=map[tag];
-  if(selectionHasTag(names)){unwrapTag(fmtCtx||flow,names);}
-  else{wrapInCtx(tag);}
-}
 function changeSizeInCtx(delta){
-  const sel=window.getSelection();if(!sel.rangeCount||sel.isCollapsed)return;
+  const sel=window.getSelection();if(!sel.rangeCount||sel.isCollapsed)return null;
   const range=sel.getRangeAt(0);
   const span=document.createElement('span');
   const probe=range.commonAncestorContainer.nodeType===3?range.commonAncestorContainer.parentElement:range.commonAncestorContainer;
   const cur=parseFloat(getComputedStyle(probe).fontSize)||13;
   span.style.fontSize=Math.max(6,cur+delta)+'px';
-  try{span.appendChild(range.extractContents());range.insertNode(span);}catch(e){}
+  try{span.appendChild(range.extractContents());range.insertNode(span);}catch(e){return null;}
+  return span;
 }
 /* is the current selection fully inside / covered by highlight spans? */
 function selectionIsHighlighted(){
@@ -1311,23 +1318,46 @@ fmtBar.querySelectorAll('button').forEach(btn=>{
     if(f==='hilite-pick'){openMiniPal('hilite',btn);return;}
     if(f==='textcolor-pick'){openMiniPal('textcolor',btn);return;}
     if(f==='quote-pick'){openMiniPal('quote',btn);return;}
+    // 적용 전 선택 범위 보존
+    const sel=window.getSelection();
+    const savedR=(sel.rangeCount&&!sel.isCollapsed)?sel.getRangeAt(0).cloneRange():null;
+    fmtApplying=true;
     pushHistory();
-    if(f==='bold')toggleWrap('strong');
-    else if(f==='italic')toggleWrap('em');
-    else if(f==='underline')toggleWrap('u');
+    let resultSpan=null;             // 선택 유지 대상(span) — 굵기/기울기/밑줄/크기
+    const keepSelection=['bold','italic','underline','size-up','size-down'].includes(f);
+    if(f==='bold')resultSpan=toggleWrap('strong');
+    else if(f==='italic')resultSpan=toggleWrap('em');
+    else if(f==='underline')resultSpan=toggleWrap('u');
     else if(f==='hilite'){
       toggleHighlight(fmtCtx||flow);
       $('#fmtHilite').classList.toggle('on',selectionIsHighlighted());
     }
     else if(f==='textcolor')applyTextColor();
-    else if(f==='size-up')changeSizeInCtx(1);
+    else if(f==='size-up')resultSpan=changeSizeInCtx(1);
     else if(f==='quote')toggleQuote();
     else if(f==='al-left')alignParas('left');
     else if(f==='al-center')alignParas('center');
     else if(f==='al-right')alignParas('right');
-    else if(f==='size-down')changeSizeInCtx(-1);
+    else if(f==='size-down')resultSpan=changeSizeInCtx(-1);
     else if(f==='clear'){const s=window.getSelection();if(s.rangeCount&&!s.isCollapsed){const r=s.getRangeAt(0),t=r.toString();r.deleteContents();r.insertNode(document.createTextNode(t));}}
-    updateFmtActive();
+    // 선택 유지 대상: 방금 만든 span 전체를 다시 선택 (드래그 유지)
+    if(keepSelection){
+      const s2=window.getSelection();
+      try{
+        if(resultSpan&&resultSpan.parentNode){
+          const nr=document.createRange();nr.selectNodeContents(resultSpan);
+          s2.removeAllRanges();s2.addRange(nr);
+        }else if(savedR){s2.removeAllRanges();s2.addRange(savedR);}
+      }catch(_){}
+      updateFmtActive();
+      if(window.getSelection().rangeCount&&!window.getSelection().isCollapsed){
+        const ctx=editableUnderSelection();if(ctx){fmtCtx=ctx;repositionFmtBar();}
+      }
+    }else{
+      // 형광펜·글자색·정렬·인용: 선택 해제(결과 확인용). 툴바는 곧 사라짐
+      updateFmtActive();
+    }
+    setTimeout(()=>{fmtApplying=false;},80);
   });
 });
 function updateFmtActive(){
