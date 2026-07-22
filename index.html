@@ -143,13 +143,14 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
 #canvas.bg-edit .bg-layer img{cursor:grab;touch-action:none}
 .sel-box .mv,.sel-box .h{touch-action:none}
 #canvas .content{position:relative;z-index:2;height:100%;overflow:hidden}
-.text-flow{position:absolute;left:0;right:0;padding:var(--pad,40px);white-space:pre-wrap;word-break:keep-all;overflow-wrap:break-word}
+.text-flow{position:absolute;left:0;right:0;padding:var(--pad,40px);white-space:pre-wrap;word-break:break-all;overflow-wrap:anywhere}
 .text-flow.v-top{top:0}
 .text-flow.v-mid{top:50%;transform:translateY(-50%)}
 .text-flow.v-bot{bottom:0}
 .text-flow p{margin:0 0 var(--pgap,14px)}
 .text-flow p:last-child{margin-bottom:0}
 .narr-italic .m-narr{font-style:italic}
+.m-quote{display:block;border-left:3px solid currentColor;padding-left:14px;margin:6px 0;opacity:.92;font-style:italic}
 .m-narr{color:var(--c-narr,#B3B3B3)}
 .m-dia{color:var(--c-dia,#FFFFFF)}
 .m-orig{color:var(--c-dia,#FFFFFF)}
@@ -165,13 +166,16 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
 .no-ui .note .del{display:none !important}
 .empty-tip{color:var(--ink-faint);font-size:13px;text-align:center;padding:30px 20px;line-height:1.7}
 /* floating format toolbar */
-.fmt-bar{position:fixed;z-index:300;display:none;align-items:center;gap:3px;background:var(--panel);border:1px solid var(--line);border-radius:9px;box-shadow:var(--shadow);padding:4px}
+.fmt-bar{position:fixed;z-index:300;display:none;align-items:center;gap:3px;background:var(--panel);border:1px solid var(--line);border-radius:9px;box-shadow:var(--shadow);padding:4px;max-width:min(94vw,420px);flex-wrap:wrap;justify-content:center}
 .fmt-bar.on{display:flex}
-.fmt-bar button{width:30px;height:30px;border:none;background:none;color:var(--ink);cursor:pointer;font-size:14px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center}
+.fmt-bar button{width:27px;height:28px;border:none;background:none;color:var(--ink);cursor:pointer;font-size:13px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;position:relative}
+.fmt-bar button.has-pick{width:30px}
+.fmt-bar .pick-badge{position:absolute;right:1px;bottom:1px;width:0;height:0;border-left:5px solid transparent;border-bottom:6px solid var(--ink-soft);border-bottom-right-radius:2px;cursor:pointer;opacity:.75}
+.fmt-bar .pick-badge:hover{opacity:1;border-bottom-color:var(--accent)}
 .fmt-bar button:hover{background:var(--panel-2)}
 .fmt-bar button.on{background:var(--accent-bg);color:var(--accent)}
 .fmt-bar b{font-weight:800}.fmt-bar i{font-style:italic}.fmt-bar u{text-decoration:underline}
-.fmt-bar .sep{width:1px;height:20px;background:var(--line);margin:0 2px}
+.fmt-bar .sep{width:1px;height:18px;background:var(--line);margin:0 1px}
 .fmt-bar .hlsw{width:18px;height:18px;border-radius:4px;border:1px solid rgba(0,0,0,.15)}
 .hl-mark{border-radius:0;-webkit-box-decoration-break:clone;box-decoration-break:clone}
 .mode-tab{flex:1;border:none;background:none;color:var(--ink-faint);font-family:inherit;font-size:12.5px;font-weight:600;padding:11px 0;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:.15s}
@@ -447,9 +451,30 @@ body.ui-dark .kk-root .toggle-row label{color:#ccc;}
       <div class="sec-body">
         <label class="f">텍스트 블록 세로 위치</label>
         <div class="seg" id="vAlign"><button data-v="top">⤒</button><button data-v="mid" class="on">⇕</button><button data-v="bot">⤓</button></div>
-        <label class="f">가로 정렬 (전체 / 드래그 선택)</label>
+        <label class="f">가로 정렬 (전체 / 드래그 선택 시 문단별)</label>
         <div class="seg" id="hAlign"><button data-a="left" class="on">⇤</button><button data-a="center">≡</button><button data-a="right">⇥</button><button data-a="justify">⇹</button></div>
-        <div class="hint">텍스트를 드래그한 뒤 가로 정렬을 누르면 그 문단만, 선택 없이 누르면 전체 적용.</div>
+        <div class="hint">전체 정렬은 여기서, 특정 문단만 정렬은 미리보기에서 <b>드래그 후 툴바</b>의 정렬 버튼으로.</div>
+        <label class="f">줄바꿈 방식</label>
+        <div class="seg" id="wbSeg"><button data-wb="break-all" class="on">꽉 채움</button><button data-wb="keep-all">단어 유지</button></div>
+        <div class="hint"><b>꽉 채움</b>: 폭에 맞춰 글자 단위로 바로 줄바꿈(줄 길이 균일). <b>단어 유지</b>: 단어가 안 잘리게 줄바꿈.</div>
+      </div>
+    </div>
+
+    <div class="sec" data-panel="credit">
+      <button class="sec-head" data-sec>출처 표기 <span class="chev">▾</span></button>
+      <div class="sec-body">
+        <div class="toggle-row"><span>하단에 출처 표시</span><label class="sw"><input type="checkbox" id="creditOn"><span class="track"></span></label></div>
+        <label class="f">제작자 / 출처</label>
+        <input type="text" id="creditAuthor" placeholder="예: @작성자" style="margin-bottom:6px">
+        <label class="f">캐릭터명 / 작품</label>
+        <input type="text" id="creditChar" placeholder="예: 블루 (Blue)">
+        <label class="f" style="margin-top:8px">구분 기호</label>
+        <input type="text" id="creditSep" value=" | " style="width:70px;text-align:center">
+        <label class="f" style="margin-top:8px">출처 위치</label>
+        <div class="seg" id="creditAlignSeg"><button data-ca="left">좌</button><button data-ca="center" class="on">중앙</button><button data-ca="right">우</button></div>
+        <div class="color-row" style="margin-top:8px"><label>출처 색상</label><button class="swatch-btn" id="sw-creditColor"></button></div>
+        <div class="slider-row"><label>글자 크기</label><input type="range" id="creditSize" min="6" max="16" value="9"><span class="val" id="creditSizeV">9</span><button class="rst" data-rst="creditSize">↺</button></div>
+        <div class="hint">판 하단에 <code>제작자 | 캐릭터명</code> 형식으로 표시됩니다. 저장 이미지에도 포함돼요.<br><span style="color:var(--accent)">💡 인용구는 미리보기에서 드래그 후 툴바 ❝ 버튼으로 적용하며, <b>문단 단위</b>로 적용됩니다. 색은 글자색을 따라가요.</span></div>
       </div>
     </div>
 
@@ -588,10 +613,11 @@ body.ui-dark .kk-root .toggle-row label{color:#ccc;}
         <div class="guide guide-v" id="guideV"></div>
         <div class="guide guide-h" id="guideH"></div>
         <div class="content" id="content"><div class="text-flow v-mid" id="flow"><div class="empty-tip">왼쪽에서 텍스트를 입력하면<br>여기에 발췌가 만들어집니다</div></div></div>
+        <div id="credit-line" style="display:none;position:absolute;left:0;right:0;bottom:0;text-align:center;pointer-events:none;"></div>
       </div>
     </div>
     <div class="canvas-outer html-only" id="htmlOuter">
-      <div id="htmlCanvas" style="position:relative;overflow:hidden;box-shadow:var(--shadow);background:transparent">
+      <div id="htmlCanvas" style="position:relative;overflow:hidden;box-shadow:var(--shadow);background:transparent;display:flex;align-items:center;justify-content:center">
         <iframe id="htmlFrame" style="border:none;display:block;width:600px;background:transparent" scrolling="no"></iframe>
         <div id="htmlEmpty" class="empty-tip" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">왼쪽에 HTML 코드를 붙여넣고<br>렌더링을 누르세요</div>
       </div>
@@ -610,7 +636,7 @@ body.ui-dark .kk-root .toggle-row label{color:#ccc;}
     <button class="on">💬 카톡</button>
   </div>
   <span style="flex:1"></span>
-  <span style="font-size:9px;color:var(--ink-faint);opacity:.7;">v6.0722-1414</span>
+  <span style="font-size:9px;color:var(--ink-faint);opacity:.7;">v6.0722-1447</span>
   <span id="autosave-ind" style="font-size:10px;color:var(--ink-faint);">자동 저장 대기</span>
   <button class="btn" style="padding:4px 8px;" id="btn-undo" onclick="undo()" title="실행취소 (Ctrl+Z)">↶</button>
   <button class="btn" style="padding:4px 8px;" id="btn-redo" onclick="redo()" title="다시실행 (Ctrl+Shift+Z)">↷</button>
@@ -935,14 +961,17 @@ body.ui-dark .kk-root .toggle-row label{color:#ccc;}
   <button data-f="italic"><i>I</i></button>
   <button data-f="underline"><u>U</u></button>
   <span class="sep"></span>
-  <button data-f="hilite" id="fmtHilite" title="형광펜 (현재 색, 다시 누르면 해제)"><span class="hlsw" id="fmtHlSw"></span></button>
-  <button data-f="hilite-pick" id="fmtHilitePick" title="형광펜 색 선택" style="width:22px">▾</button>
-  <button data-f="textcolor" id="fmtTextColor" title="글자색 (현재 색)" style="display:none"><span class="hlsw" id="fmtTcSw" style="border-radius:50%"></span></button>
-  <button data-f="textcolor-pick" id="fmtTextColorPick" title="글자색 선택" style="display:none;width:22px">▾</button>
+  <button class="has-pick" data-f="hilite" id="fmtHilite" title="형광펜 (클릭=적용/해제 · 모서리▾=색)"><span class="hlsw" id="fmtHlSw"></span><i class="pick-badge" data-f="hilite-pick" id="fmtHilitePick"></i></button>
+  <button class="has-pick" data-f="textcolor" id="fmtTextColor" title="글자색 (클릭=적용 · 모서리▾=색)" style="display:none"><span class="hlsw" id="fmtTcSw" style="border-radius:50%"></span><i class="pick-badge" data-f="textcolor-pick" id="fmtTextColorPick"></i></button>
   <span class="sep"></span>
   <button data-f="size-up" title="크게">A＋</button>
-  <button data-f="size-down" title="작게" style="font-size:12px">A－</button>
+  <button data-f="size-down" title="작게" style="font-size:11px">A－</button>
   <span class="sep"></span>
+  <button data-f="al-left" title="문단 왼쪽 정렬">⇤</button>
+  <button data-f="al-center" title="문단 가운데 정렬">≡</button>
+  <button data-f="al-right" title="문단 오른쪽 정렬">⇥</button>
+  <span class="sep"></span>
+  <button class="has-pick" data-f="quote" id="fmtQuote" title="인용구 (클릭=적용/해제 · 모서리▾=바 색)">❝<i class="pick-badge" data-f="quote-pick" id="fmtQuotePick"></i></button>
   <button data-f="clear" title="지우기">⌫</button>
 </div>
 
@@ -987,7 +1016,7 @@ window.addEventListener('error',function(ev){
 <script>
 const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
 const isMobile=()=>window.matchMedia('(max-width:860px)').matches;
-const DEFAULTS={hlOpac:60,fSize:11,lh:180,ls:0,pad:40,paraGap:14,bgScale:100,bgOpac:60,cw:560,noteSize:7,htmlW:600,htmlPad:0};
+const DEFAULTS={hlOpac:60,fSize:11,lh:180,ls:0,pad:40,paraGap:14,bgScale:100,bgOpac:60,cw:560,noteSize:7,htmlW:600,htmlPad:0,creditSize:9};
 const FONTS=[['고딕 (기본)',"'Noto Sans KR',sans-serif"],['나눔고딕',"'Nanum Gothic',sans-serif"],['나눔바른고딕',"'Nanum Gothic','Noto Sans KR',sans-serif"],['IBM Plex 고딕',"'IBM Plex Sans KR',sans-serif"],['명조 (나눔)',"'Nanum Myeongjo',serif"],['본명조',"'Noto Serif KR',serif"],['함렛 세리프',"'Hahmlet',serif"],['고운돋움',"'Gowun Dodum',sans-serif"],['고운바탕',"'Gowun Batang',serif"],['손글씨 개구',"'Gaegu',cursive"],['나눔손글씨 펜',"'Nanum Pen Script',cursive"]];
 const fontSel=$('#font'),noteFontSel=$('#noteFont');
 FONTS.forEach(([n,v])=>{fontSel.insertAdjacentHTML('beforeend',`<option value="${v}">${n}</option>`);noteFontSel.insertAdjacentHTML('beforeend',`<option value="${v}">${n}</option>`);});
@@ -995,7 +1024,7 @@ noteFontSel.value="'Nanum Gothic','Noto Sans KR',sans-serif";
 const PALETTE=['#FFFFFF','#F2F2F2','#D9D9D9','#BFBFBF','#999999','#666666','#404040','#1A1A1A','#000000','#B3B3B3','#FBD3D3','#FCE3C9','#FBF3C4','#E4F3C9','#CDEFD6','#C9EEF0','#CFE0FB','#D9D2F7','#F0D4F2','#F7D7E6','#F49B9B','#F5BE84','#F0DC72','#BFE08A','#8FD8A8','#82CFD6','#8FB6F0','#A99CE6','#D89BE0','#E89CBE'];
 const HL_PASTEL=['#FFF3A8','#FFD6C4','#C8F2D4','#C4E4FB','#E5D2F7','#FBD3E2'];
 const HL_MUTED=['#D4C77A','#D1A78C','#9CC4A6','#90A8C2','#B09CC2','#C29CAC'];
-const state={ratio:'3:4',cw:560,pad:40,paraGap:14,fSize:11,lh:1.8,ls:0,font:"'Noto Sans KR',sans-serif",cDia:'#FFFFFF',cNarr:'#B3B3B3',cTrans:'#B3B3B3',showQuotes:false,narrItalic:false,hlColor:'#FFF3A8',hlOpac:.6,vAlign:'mid',hAlign:'left',bg:null,bgScale:1,bgOpac:.6,bgX:0,bgY:0,board:'#1A1A1A',bgEdit:false,noteFont:"'Nanum Gothic','Noto Sans KR',sans-serif",noteBg:'#FFF3A8',noteFg:'#999999',noteBgOn:false,noteArrow:false,noteSize:7,theme:'dark',zoom:null,recent:[]};
+const state={ratio:'3:4',cw:560,pad:40,paraGap:14,fSize:11,lh:1.8,ls:0,font:"'Noto Sans KR',sans-serif",cDia:'#FFFFFF',cNarr:'#B3B3B3',cTrans:'#B3B3B3',showQuotes:false,narrItalic:false,hlColor:'#FFF3A8',hlOpac:.6,vAlign:'mid',hAlign:'left',bg:null,bgScale:1,bgOpac:.6,bgX:0,bgY:0,board:'#1A1A1A',bgEdit:false,noteFont:"'Nanum Gothic','Noto Sans KR',sans-serif",noteBg:'#FFF3A8',noteFg:'#999999',noteBgOn:false,noteArrow:false,noteSize:7,theme:'dark',zoom:null,recent:[],creditOn:false,creditAuthor:'',creditChar:'',creditSep:' | ',creditColor:'#888888',creditSize:9,wordBreak:'break-all',creditAlign:'center',quoteColor:'#7C9CBF'};
 
 function hexToRgba(hex,a){const h=hex.replace('#','');const f=h.length===3?h.split('').map(x=>x+x).join(''):h;const n=parseInt(f,16);return`rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;}
 function applyTheme(t){state.theme=t;if(t==='dark'){state.board='#1A1A1A';state.cDia='#FFFFFF';state.cNarr='#B3B3B3';state.cTrans='#B3B3B3';}else{state.board='#FFFFFF';state.cDia='#1A1A1A';state.cNarr='#8A8A8A';state.cTrans='#9A9A9A';}refreshSwatches();applyCanvas();applyTextStyles();}
@@ -1014,14 +1043,14 @@ function rgbToHex(r,g,b){const c=v=>Math.max(0,Math.min(255,+v||0)).toString(16)
 function syncPopInputs(c){$('#popBig').style.background=c;$('#hexIn').value=c.replace('#','');$('#nativeIn').value=c.length===4?'#'+c.slice(1).split('').map(x=>x+x).join(''):c;const[r,g,b]=hexToRgb(c);$('#rIn').value=r;$('#gIn').value=g;$('#bIn').value=b;$$('#palGrid .sw').forEach(s=>s.classList.toggle('sel',s.dataset.c.toUpperCase()===c.toUpperCase()));}
 function setColor(c,addRecent=true){c=c.toUpperCase();state[popTarget]=c;syncPopInputs(c);if(addRecent)pushRecent(c);applyColorEffect(popTarget);}
 function pushRecent(c){c=c.toUpperCase();state.recent=[c,...state.recent.filter(x=>x!==c)].slice(0,10);buildRecent();}
-function applyColorEffect(key){refreshSwatches();if(key==='hlColor'){$('#fmtHlSw').style.background=state.hlColor;return;}if(key==='noteFg'){$('#fmtTcSw').style.background=state.noteFg;}if(key==='htmlBgCustom'){$('#sw-htmlBg').style.background=state.htmlBgCustom;if(typeof htmlState!=='undefined'){htmlState.bg=state.htmlBgCustom;htmlState.bgCss=null;htmlState.bgIsGradient=false;$$('#htmlBgChips .chip').forEach(x=>x.classList.remove('on'));sizeHtmlFrame();}return;}if(key==='board')applyCanvas();else if(key.startsWith('note'))updateNotesStyle();else applyTextStyles();}
+function applyColorEffect(key){refreshSwatches();if(key==='hlColor'){$('#fmtHlSw').style.background=state.hlColor;return;}if(key==='noteFg'){$('#fmtTcSw').style.background=state.noteFg;}if(key==='creditColor'){renderCredit();return;}if(key==='htmlBgCustom'){$('#sw-htmlBg').style.background=state.htmlBgCustom;if(typeof htmlState!=='undefined'){htmlState.bg=state.htmlBgCustom;htmlState.bgCss=null;htmlState.bgIsGradient=false;$$('#htmlBgChips .chip').forEach(x=>x.classList.remove('on'));sizeHtmlFrame();}return;}if(key==='board')applyCanvas();else if(key.startsWith('note'))updateNotesStyle();else applyTextStyles();}
 function openPop(key,btn,name){popTarget=key;$('#popName').textContent=name;syncPopInputs(state[key]);popMask.classList.add('on');const r=btn.getBoundingClientRect();let left,top;if(isMobile()){left=(window.innerWidth-280)/2;top=Math.max(60,(window.innerHeight-360)/2);}else{left=r.left-210;top=r.bottom+6;if(left<8)left=8;if(top+300>window.innerHeight)top=Math.max(8,r.top-306);}pop.style.left=left+'px';pop.style.top=top+'px';}
 popMask.addEventListener('click',e=>{if(e.target===popMask)popMask.classList.remove('on');});
 $('#hexIn').addEventListener('input',e=>{let v=e.target.value.replace(/[^0-9a-fA-F]/g,'');if(v.length===6||v.length===3)setColor('#'+v);});
 $('#nativeIn').addEventListener('input',e=>setColor(e.target.value,false));
 $('#nativeIn').addEventListener('change',e=>setColor(e.target.value,true));
 ['rIn','gIn','bIn'].forEach(id=>$('#'+id).addEventListener('input',()=>setColor(rgbToHex($('#rIn').value,$('#gIn').value,$('#bIn').value))));
-const COLOR_BTNS=[['sw-cDia','cDia','대사 색상'],['sw-cNarr','cNarr','지문 색상'],['sw-cTrans','cTrans','번역 색상'],['sw-hl','hlColor','형광펜 색상'],['sw-board','board','판 배경색'],['sw-noteBg','noteBg','주석 배경색'],['sw-noteFg','noteFg','주석 글자색']];
+const COLOR_BTNS=[['sw-cDia','cDia','대사 색상'],['sw-cNarr','cNarr','지문 색상'],['sw-cTrans','cTrans','번역 색상'],['sw-hl','hlColor','형광펜 색상'],['sw-board','board','판 배경색'],['sw-noteBg','noteBg','주석 배경색'],['sw-noteFg','noteFg','주석 글자색'],['sw-creditColor','creditColor','출처 색상']];
 COLOR_BTNS.forEach(([id,key,name])=>$('#'+id).addEventListener('click',()=>openPop(key,$('#'+id),name)));
 function refreshSwatches(){COLOR_BTNS.forEach(([id,key])=>$('#'+id).style.background=state[key]);}
 
@@ -1109,7 +1138,7 @@ $('#applyBtn').addEventListener('click',()=>{
 });
 flow.setAttribute('contenteditable','true');flow.style.userSelect='text';
 
-function applyTextStyles(){flow.style.setProperty('--pad',state.pad+'px');flow.style.setProperty('--pgap',state.paraGap+'px');flow.style.fontSize=state.fSize+'px';flow.style.lineHeight=state.lh;flow.style.letterSpacing=state.ls/100+'em';flow.style.fontFamily=state.font;flow.style.textAlign=state.hAlign;flow.classList.toggle('narr-italic',state.narrItalic);
+function applyTextStyles(){flow.style.setProperty('--pad',state.pad+'px');flow.style.setProperty('--pgap',state.paraGap+'px');flow.style.fontSize=state.fSize+'px';flow.style.lineHeight=state.lh;flow.style.letterSpacing=state.ls/100+'em';flow.style.fontFamily=state.font;flow.style.textAlign=state.hAlign;flow.style.wordBreak=state.wordBreak;flow.style.overflowWrap=(state.wordBreak==='break-all'?'anywhere':'break-word');flow.classList.toggle('narr-italic',state.narrItalic);
   // 색은 CSS 변수로 지정 → 드래그로 넣은 자식 span의 색(style.color)이 우선하도록
   flow.style.setProperty('--c-narr',state.cNarr);
   flow.style.setProperty('--c-dia',state.cDia);
@@ -1188,6 +1217,36 @@ function unwrapTag(ctx,tagNames){
   const els=[...ctx.querySelectorAll(sels)].filter(m=>range.intersectsNode(m));
   els.forEach(m=>{const parent=m.parentNode;while(m.firstChild)parent.insertBefore(m.firstChild,m);parent.removeChild(m);parent.normalize();});
 }
+function alignParas(a){
+  const sel=window.getSelection();if(!sel.rangeCount)return;
+  const range=sel.getRangeAt(0);const ctx=fmtCtx||flow;
+  const paras=[...ctx.querySelectorAll('p')].filter(p=>range.intersectsNode(p));
+  const targets=paras.length?paras:[(()=>{let n=range.commonAncestorContainer;n=n.nodeType===3?n.parentElement:n;return n.closest('p')||n;})()].filter(Boolean);
+  targets.forEach(p=>p.style.textAlign=a);
+}
+function toggleQuote(){
+  const sel=window.getSelection();if(!sel.rangeCount)return;
+  const range=sel.getRangeAt(0);
+  const ctx=fmtCtx||flow;
+  const paras=[...ctx.querySelectorAll('p')].filter(p=>range.intersectsNode(p));
+  const targets=paras.length?paras:[ (()=>{let n=range.commonAncestorContainer;n=n.nodeType===3?n.parentElement:n;return n.closest('p')||n;})() ].filter(Boolean);
+  if(!targets.length)return;
+  const allQuoted=targets.every(p=>p.classList.contains('m-quote'));
+  targets.forEach(p=>{
+    if(allQuoted){p.classList.remove('m-quote');p.style.removeProperty('border-left-color');}
+    else{p.classList.add('m-quote');if(state.quoteColor)p.style.borderLeftColor=state.quoteColor;}
+  });
+}
+function applyQuoteColor(){
+  const sel=window.getSelection();if(!sel.rangeCount)return;
+  const range=sel.getRangeAt(0);const ctx=fmtCtx||flow;
+  let paras=[...ctx.querySelectorAll('p.m-quote')].filter(p=>range.intersectsNode(p));
+  if(!paras.length){ // 선택 문단이 아직 인용이 아니면 인용 적용하며 색 지정
+    const t=[...ctx.querySelectorAll('p')].filter(p=>range.intersectsNode(p));
+    t.forEach(p=>{p.classList.add('m-quote');});paras=t;
+  }
+  paras.forEach(p=>p.style.borderLeftColor=state.quoteColor);
+}
 function toggleWrap(tag){
   // strong↔b, em↔i, u 모두 인식
   const map={strong:['strong','b'],em:['em','i'],u:['u']};
@@ -1240,9 +1299,18 @@ function applyTextColor(){
 fmtBar.querySelectorAll('button').forEach(btn=>{
   btn.addEventListener('mousedown',e=>e.preventDefault());
   btn.addEventListener('click',e=>{
+    // 색 선택 뱃지(▾) 클릭 우선 판별
+    const badge=e.target.closest('.pick-badge');
+    if(badge){
+      const bf=badge.dataset.f;
+      if(bf==='hilite-pick'){openMiniPal('hilite',btn);return;}
+      if(bf==='textcolor-pick'){openMiniPal('textcolor',btn);return;}
+      if(bf==='quote-pick'){openMiniPal('quote',btn);return;}
+    }
     const f=btn.dataset.f;
     if(f==='hilite-pick'){openMiniPal('hilite',btn);return;}
     if(f==='textcolor-pick'){openMiniPal('textcolor',btn);return;}
+    if(f==='quote-pick'){openMiniPal('quote',btn);return;}
     pushHistory();
     if(f==='bold')toggleWrap('strong');
     else if(f==='italic')toggleWrap('em');
@@ -1253,6 +1321,10 @@ fmtBar.querySelectorAll('button').forEach(btn=>{
     }
     else if(f==='textcolor')applyTextColor();
     else if(f==='size-up')changeSizeInCtx(1);
+    else if(f==='quote')toggleQuote();
+    else if(f==='al-left')alignParas('left');
+    else if(f==='al-center')alignParas('center');
+    else if(f==='al-right')alignParas('right');
     else if(f==='size-down')changeSizeInCtx(-1);
     else if(f==='clear'){const s=window.getSelection();if(s.rangeCount&&!s.isCollapsed){const r=s.getRangeAt(0),t=r.toString();r.deleteContents();r.insertNode(document.createTextNode(t));}}
     updateFmtActive();
@@ -1281,7 +1353,7 @@ function buildMini(){
 }
 function openMiniPal(mode,btn){
   miniMode=mode;saveRange();
-  $('#miniLbl').textContent=mode==='hilite'?'형광펜 색':'글자색';
+  $('#miniLbl').textContent=mode==='hilite'?'형광펜 색':mode==='quote'?'인용 바 색':'글자색';
   const cur=mode==='hilite'?state.hlColor:state.noteFg;
   $('#miniHex').value=cur.replace('#','');$('#miniNative').value=cur.length===4?'#'+cur.slice(1).split('').map(x=>x+x).join(''):cur;
   buildMini();
@@ -1295,20 +1367,36 @@ function closeMiniPal(){miniPal.classList.remove('on');miniMode=null;}
 function miniPreview(c){
   c=c.toUpperCase();
   if(miniMode==='hilite'){state.hlColor=c;$('#sw-hl').style.background=c;$('#fmtHlSw').style.background=c;}
+  else if(miniMode==='quote'){state.quoteColor=c;}
   else{state.noteFg=c;$('#sw-noteFg').style.background=c;$('#fmtTcSw').style.background=c;}
 }
 function miniPick(c){
   c=c.toUpperCase();restoreRange();pushHistory();
   if(miniMode==='hilite'){state.hlColor=c;$('#sw-hl').style.background=c;$('#fmtHlSw').style.background=c;$$('#hlChips .chip').forEach(x=>x.classList.remove('on'));applyHighlight(fmtCtx||flow);}
+  else if(miniMode==='quote'){state.quoteColor=c;applyQuoteColor();}
   else{state.noteFg=c;$('#sw-noteFg').style.background=c;$('#fmtTcSw').style.background=c;applyTextColor();}
   pushRecent(c);closeMiniPal();
 }
 $('#miniHex').addEventListener('input',e=>{let v=e.target.value.replace(/[^0-9a-fA-F]/g,'');if(v.length===6||v.length===3)miniPick('#'+v);});
 $('#miniNative').addEventListener('input',e=>miniPreview(e.target.value));
 $('#miniNative').addEventListener('change',e=>miniPick(e.target.value));
-document.addEventListener('pointerdown',e=>{if(miniPal.classList.contains('on')&&!miniPal.contains(e.target)&&!e.target.closest('#fmtHilite')&&!e.target.closest('#fmtHilitePick')&&!e.target.closest('#fmtTextColor')&&!e.target.closest('#fmtTextColorPick'))closeMiniPal();});
+document.addEventListener('pointerdown',e=>{if(miniPal.classList.contains('on')&&!miniPal.contains(e.target)&&!e.target.closest('#fmtHilite')&&!e.target.closest('#fmtHilitePick')&&!e.target.closest('#fmtTextColor')&&!e.target.closest('#fmtTextColorPick')&&!e.target.closest('#fmtQuotePick'))closeMiniPal();});
 
-function applyCanvas(){const c=$('#canvas');c.style.width=state.cw+'px';c.style.background=state.board;if(state.ratio==='auto'){c.style.height='auto';c.style.minHeight='220px';$('#content').style.height='auto';flow.style.position='relative';flow.classList.remove('v-top','v-mid','v-bot');}else{const[rw,rh]=state.ratio.split(':').map(Number);c.style.height=(state.cw*rh/rw)+'px';$('#content').style.height='100%';flow.style.position='absolute';if(!flow.classList.contains('v-'+state.vAlign))flow.classList.add('v-'+state.vAlign);}fitZoom();positionBgSelect();}
+function renderCredit(){
+  const el=$('#credit-line');if(!el)return;
+  if(!state.creditOn||(!state.creditAuthor&&!state.creditChar)){el.style.display='none';return;}
+  const parts=[state.creditAuthor,state.creditChar].filter(Boolean);
+  el.textContent=parts.join(state.creditSep||' | ');
+  el.style.display='block';
+  el.style.color=state.creditColor;
+  el.style.fontSize=state.creditSize+'px';
+  el.style.padding=(state.pad*0.5)+'px '+state.pad+'px';
+  el.style.fontFamily=state.font;
+  el.style.letterSpacing='.02em';
+  el.style.opacity='.85';
+  el.style.textAlign=state.creditAlign||'center';
+}
+function applyCanvas(){const c=$('#canvas');c.style.width=state.cw+'px';c.style.background=state.board;if(state.ratio==='auto'){c.style.height='auto';c.style.minHeight='220px';$('#content').style.height='auto';flow.style.position='relative';flow.classList.remove('v-top','v-mid','v-bot');}else{const[rw,rh]=state.ratio.split(':').map(Number);c.style.height=(state.cw*rh/rw)+'px';$('#content').style.height='100%';flow.style.position='absolute';if(!flow.classList.contains('v-'+state.vAlign))flow.classList.add('v-'+state.vAlign);}renderCredit();fitZoom();positionBgSelect();}
 
 /* ===== background ===== */
 const bgLayer=$('#bgLayer'),bgSelect=$('#bgSelect'),canvasEl=$('#canvas');
@@ -1481,6 +1569,13 @@ bindRange('hlOpac',()=>{state.hlOpac=+$('#hlOpac').value/100;$('#hlOpacV').textC
 bindRange('noteSize',()=>{state.noteSize=+$('#noteSize').value;$('#noteSizeV').textContent=state.noteSize;updateNotesStyle();});
 $('#showQuotes').addEventListener('change',e=>{if(hasManualFormatting()&&!confirm('따옴표 표시를 바꾸면 본문이 다시 그려져 수동 서식이 사라집니다. 계속할까요?')){e.target.checked=!e.target.checked;return;}state.showQuotes=e.target.checked;pushHistory();buildFromMarkup();});
 $('#narrItalic').addEventListener('change',e=>{state.narrItalic=e.target.checked;applyTextStyles();});
+$('#wbSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$$('#wbSeg button').forEach(x=>x.classList.remove('on'));b.classList.add('on');state.wordBreak=b.dataset.wb;applyTextStyles();});
+$('#creditOn').addEventListener('change',e=>{state.creditOn=e.target.checked;renderCredit();});
+$('#creditAuthor').addEventListener('input',e=>{state.creditAuthor=e.target.value;renderCredit();});
+$('#creditChar').addEventListener('input',e=>{state.creditChar=e.target.value;renderCredit();});
+$('#creditSep').addEventListener('input',e=>{state.creditSep=e.target.value;renderCredit();});
+bindRange('creditSize',()=>{state.creditSize=+$('#creditSize').value;$('#creditSizeV').textContent=state.creditSize;renderCredit();});
+$('#creditAlignSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$$('#creditAlignSeg button').forEach(x=>x.classList.remove('on'));b.classList.add('on');state.creditAlign=b.dataset.ca;renderCredit();});
 $('#font').addEventListener('change',e=>{state.font=e.target.value;applyTextStyles();});
 function setRatio(r){
   state.ratio=r;
@@ -1604,8 +1699,8 @@ $('#exportBtn').addEventListener('click',async()=>{
           f.style.width=W+'px';
           const lsPx=Math.round(state.ls/100*state.fSize);
           f.style.letterSpacing=lsPx+'px';
-          f.style.wordBreak='keep-all';
-          f.style.overflowWrap='break-word';
+          f.style.wordBreak=state.wordBreak;
+          f.style.overflowWrap=(state.wordBreak==='break-all'?'anywhere':'break-word');
           f.style.setProperty('--c-narr',state.cNarr);
           f.style.setProperty('--c-dia',state.cDia);
           f.style.setProperty('--c-trans',state.cTrans);
@@ -1670,7 +1765,7 @@ const STYLE_KEYS=['pad','paraGap','fSize','lh','ls','font','cDia','cNarr','cTran
 function collectWork(){
   const o={v:1,src:$('#src').value,state:{},content:$('#content').innerHTML,ratio:state.ratio,cw:state.cw,theme:state.theme,bg:state.bg,bgScale:state.bgScale,bgOpac:state.bgOpac,bgX:state.bgX,bgY:state.bgY,board:state.board,
     htmlSrc:$('#htmlSrc')?$('#htmlSrc').value:'',htmlState:(typeof htmlState!=='undefined')?{...htmlState}:null};
-  ['pad','paraGap','fSize','lh','ls','font','cDia','cNarr','cTrans','showQuotes','narrItalic','hlColor','hlOpac','noteFont','noteBg','noteFg','noteBgOn','noteArrow','noteSize','vAlign','hAlign','recent'].forEach(k=>o.state[k]=state[k]);
+  ['pad','paraGap','fSize','lh','ls','font','cDia','cNarr','cTrans','showQuotes','narrItalic','hlColor','hlOpac','noteFont','noteBg','noteFg','noteBgOn','noteArrow','noteSize','vAlign','hAlign','recent','creditOn','creditAuthor','creditChar','creditSep','creditColor','creditSize','wordBreak','creditAlign','quoteColor'].forEach(k=>o.state[k]=state[k]);
   return o;
 }
 function applyWork(o){
@@ -1689,6 +1784,11 @@ function applyWork(o){
   $('#hlOpac').value=Math.round(state.hlOpac*100);$('#hlOpacV').textContent=Math.round(state.hlOpac*100)+'%';
   $('#noteSize').value=state.noteSize;$('#noteSizeV').textContent=state.noteSize;
   $('#showQuotes').checked=state.showQuotes;$('#narrItalic').checked=state.narrItalic;$('#noteBgOn').checked=state.noteBgOn;$('#noteArrow').checked=state.noteArrow;
+  $('#creditOn').checked=!!state.creditOn;$('#creditAuthor').value=state.creditAuthor||'';$('#creditChar').value=state.creditChar||'';$('#creditSep').value=state.creditSep||' | ';$('#creditSize').value=state.creditSize||9;$('#creditSizeV').textContent=state.creditSize||9;
+  state.wordBreak=state.wordBreak||'break-all';state.creditAlign=state.creditAlign||'center';state.quoteColor=state.quoteColor||'#7C9CBF';
+  $$('#wbSeg button').forEach(b=>b.classList.toggle('on',b.dataset.wb===state.wordBreak));
+  $$('#creditAlignSeg button').forEach(b=>b.classList.toggle('on',b.dataset.ca===state.creditAlign));
+  renderCredit();
   $('#cw').value=state.cw;$('#cwV').textContent=state.cw;
   $('#bgScale').value=Math.round(state.bgScale*100);$('#bgScaleV').textContent=Math.round(state.bgScale*100)+'%';
   $('#bgOpac').value=Math.round(state.bgOpac*100);$('#bgOpacV').textContent=Math.round(state.bgOpac*100)+'%';
@@ -1947,7 +2047,10 @@ async function exportHtml(){
     const ctx=out.getContext('2d');
     if(bgCanvas){ctx.drawImage(bgCanvas,0,0,out.width,out.height);}
     else if(bg){ctx.fillStyle=bg;ctx.fillRect(0,0,out.width,out.height);}
-    ctx.drawImage(canvas,0,htmlState.pad*sc);
+    // 내용을 판 안에서 세로 중앙 배치 (미리보기와 동일). 여백은 최소 오프셋으로 보장.
+    const contentPx=canvas.height/sc; // 캡처된 내용 실제 높이(px)
+    let offY=Math.max(htmlState.pad,(boardH-contentPx)/2);
+    ctx.drawImage(canvas,0,Math.round(offY*sc));
     const a=document.createElement('a');a.download='HTML발췌_'+Date.now()+'.png';a.href=out.toDataURL('image/png');a.click();
   }catch(err){alert('저장 실패: '+err.message+'\n(외부 리소스를 불러오는 HTML은 캡처가 제한될 수 있어요)');}
   finally{$('#htmlOuter').style.transform=savedT;emptyEl.style.display=wasEmpty;btn.textContent=old;btn.disabled=false;}
