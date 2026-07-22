@@ -438,7 +438,7 @@ body.ui-dark .kk-root .toggle-row label{color:#ccc;}
           <button class="btn primary" id="applyBtn" style="flex:1">✓ 적용</button>
           <div class="toggle-row" style="margin:0;gap:7px;flex-shrink:0"><span style="font-size:11.5px">자동</span><label class="sw"><input type="checkbox" id="autoApply"><span class="track"></span></label></div>
         </div>
-        <div class="hint"><code>*지문*</code> · <code>"대사"</code> · <code>@원문</code>+다음줄<code>=번역</code><br>입력 후 <b>적용</b>을 누르면 미리보기에 반영됩니다. (자동 켜면 실시간)</div>
+        <div class="hint"><code>*지문*</code> · <code>"대사"</code> · <code>@원문</code>+다음줄<code>=번역</code><br>입력 후 <b>적용</b>을 누르면 미리보기에 반영됩니다. (자동 켜면 실시간 · 대신 버벅임)<br><span style="color:var(--accent)">지문의 <code>*</code> 짝이 맞는지 확인하세요 (같은 문단 안에서 여닫기).</span></div>
       </div>
     </div>
 
@@ -610,7 +610,7 @@ body.ui-dark .kk-root .toggle-row label{color:#ccc;}
     <button class="on">💬 카톡</button>
   </div>
   <span style="flex:1"></span>
-  <span style="font-size:9px;color:var(--ink-faint);opacity:.7;">v6.0722-1402</span>
+  <span style="font-size:9px;color:var(--ink-faint);opacity:.7;">v6.0722-1414</span>
   <span id="autosave-ind" style="font-size:10px;color:var(--ink-faint);">자동 저장 대기</span>
   <button class="btn" style="padding:4px 8px;" id="btn-undo" onclick="undo()" title="실행취소 (Ctrl+Z)">↶</button>
   <button class="btn" style="padding:4px 8px;" id="btn-redo" onclick="redo()" title="다시실행 (Ctrl+Shift+Z)">↷</button>
@@ -971,9 +971,16 @@ body.ui-dark .kk-root .toggle-row label{color:#ccc;}
 <script>
 window.addEventListener('error',function(ev){
   try{
-    var b=document.getElementById('kk-err-banner');
-    if(!b){b=document.createElement('div');b.id='kk-err-banner';b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:2147483647;background:#c0392b;color:#fff;font-size:11px;padding:6px 12px;font-family:monospace;white-space:pre-wrap;max-height:40vh;overflow:auto;';document.documentElement.appendChild(b);}
-    b.textContent+='[오류] '+(ev.message||'')+' @'+(ev.filename||'').split('/').pop()+':'+ev.lineno+'\n';
+    var w=document.getElementById('gerr-toast-wrap');
+    if(!w){w=document.createElement('div');w.id='gerr-toast-wrap';w.style.cssText='position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:2147483647;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;';document.documentElement.appendChild(w);}
+    var msg=(ev.message||'').replace(/^Uncaught\s*/,'');
+    var el=document.createElement('div');
+    el.style.cssText='background:#c0392b;color:#fff;font-size:12px;padding:9px 16px;border-radius:20px;box-shadow:0 4px 16px rgba(0,0,0,.25);max-width:80vw;text-align:center;opacity:0;transition:opacity .2s;';
+    el.textContent='⚠ 처리 중 문제가 발생했어요 · '+msg.slice(0,80);
+    w.appendChild(el);
+    requestAnimationFrame(function(){el.style.opacity='1';});
+    setTimeout(function(){el.style.opacity='0';},3200);
+    setTimeout(function(){el.remove();},3600);
   }catch(_){}
 });
 </script>
@@ -1059,7 +1066,36 @@ function doRedo(){
 }
 
 function esc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
-function parseInline(line){let out='',i=0;while(i<line.length){const ch=line[i];if(ch==='*'){const e=line.indexOf('*',i+1);if(e>-1){out+=`<span class="m-narr">${esc(line.slice(i+1,e))}</span>`;i=e+1;continue;}}if(ch==='"'){const e=line.indexOf('"',i+1);if(e>-1){const lq=state.showQuotes?'&ldquo;':'',rq=state.showQuotes?'&rdquo;':'';out+=`<span class="m-dia">${lq}${esc(line.slice(i+1,e))}${rq}</span>`;i=e+1;continue;}}let j=i;while(j<line.length&&line[j]!=='*'&&line[j]!=='"')j++;out+=`<span class="m-dia">${esc(line.slice(i,j))}</span>`;i=j;}return out;}
+function parseInline(line){
+  let out='',i=0,guard=0;
+  while(i<line.length){
+    if(++guard>line.length+10)break; // 안전장치: 무한루프 방지
+    const ch=line[i];
+    if(ch==='*'){
+      const e=line.indexOf('*',i+1);
+      if(e>i+0){ // 짝을 찾음 (빈 구간이어도 e>i)
+        const inner=line.slice(i+1,e);
+        out+=`<span class="m-narr">${esc(inner)}</span>`;
+        i=e+1;continue;
+      }
+      // 짝 없는 '*' → 일반 글자로 출력하고 넘어감
+      out+='*';i++;continue;
+    }
+    if(ch==='"'){
+      const e=line.indexOf('"',i+1);
+      if(e>-1){
+        const lq=state.showQuotes?'&ldquo;':'',rq=state.showQuotes?'&rdquo;':'';
+        out+=`<span class="m-dia">${lq}${esc(line.slice(i+1,e))}${rq}</span>`;
+        i=e+1;continue;
+      }
+      out+='"';i++;continue;
+    }
+    let j=i;while(j<line.length&&line[j]!=='*'&&line[j]!=='"')j++;
+    out+=`<span class="m-dia">${esc(line.slice(i,j))}</span>`;
+    i=j;
+  }
+  return out;
+}
 function buildFromMarkup(){const raw=$('#src').value;if(!raw.trim()){flow.innerHTML='<div class="empty-tip">왼쪽에서 텍스트를 입력하면<br>여기에 발췌가 만들어집니다</div>';return;}const lines=raw.split('\n');let html='',para=[];const flush=()=>{if(para.length){html+='<p>'+para.join('<br>')+'</p>';para=[];}};for(let k=0;k<lines.length;k++){let line=lines[k];if(line.trim()===''){flush();continue;}if(line[0]==='@'){flush();const orig=line.slice(1);let tr=null;if(k+1<lines.length&&lines[k+1][0]==='='){tr=lines[k+1].slice(1);k++;}html+=`<p><span class="m-orig">${parseInline(orig)}</span>`+(tr!==null?`<br><span class="m-trans">— ${esc(tr)}</span>`:'')+`</p>`;continue;}if(line[0]==='='){flush();html+=`<p><span class="m-trans">— ${esc(line.slice(1))}</span></p>`;continue;}para.push(parseInline(line));}flush();flow.innerHTML=html;applyTextStyles();}
 let autoApply=false;
 $('#autoApply').addEventListener('change',e=>{autoApply=e.target.checked;if(autoApply){if(hasManualFormatting()&&!confirm('실시간 적용을 켜면 드래그로 준 형광펜·굵기 등 수동 서식이 사라집니다. 계속할까요?')){e.target.checked=false;autoApply=false;return;}pushHistory();buildFromMarkup();}});
@@ -3146,7 +3182,7 @@ window.captureEpisode=captureEpisode;
 window.saveCurrentImage=saveCurrentImage;
 window.saveAllImages=saveAllImages;
 }catch(kkErr){console.error("kakao init:",kkErr);
-try{const b=document.createElement('div');b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:#c0392b;color:#fff;font-size:12px;padding:8px 14px;font-family:monospace;white-space:pre-wrap;';b.textContent='카톡 모듈 초기화 오류: '+(kkErr&&(kkErr.stack||kkErr.message)||kkErr);document.body.appendChild(b);}catch(_){}}
+try{const b=document.createElement('div');b.style.cssText='position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:99999;background:#c0392b;color:#fff;font-size:12px;padding:9px 16px;border-radius:20px;box-shadow:0 4px 16px rgba(0,0,0,.25);max-width:80vw;text-align:center;transition:opacity .2s;';b.textContent='⚠ 카톡 모듈 초기화 오류 · '+String(kkErr&&kkErr.message||kkErr).slice(0,80);document.body.appendChild(b);setTimeout(()=>b.style.opacity='0',5500);setTimeout(()=>b.remove(),6000);}catch(_){}}
 </script>
 </body>
 </html>
