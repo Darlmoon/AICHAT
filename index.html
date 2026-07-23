@@ -636,7 +636,7 @@ body.ui-dark .kk-root .toggle-row label{color:#ccc;}
     <button class="on">💬 카톡</button>
   </div>
   <span style="flex:1"></span>
-  <span style="font-size:9px;color:var(--ink-faint);opacity:.7;">v6.0722-1459</span>
+  <span style="font-size:9px;color:var(--ink-faint);opacity:.7;">v6.0723-0404</span>
   <span id="autosave-ind" style="font-size:10px;color:var(--ink-faint);">자동 저장 대기</span>
   <button class="btn" style="padding:4px 8px;" id="btn-undo" onclick="undo()" title="실행취소 (Ctrl+Z)">↶</button>
   <button class="btn" style="padding:4px 8px;" id="btn-redo" onclick="redo()" title="다시실행 (Ctrl+Shift+Z)">↷</button>
@@ -1688,7 +1688,7 @@ function splitHighlightsByLine(){
       return[last,last.textContent.length];
     }
     const frag=document.createDocumentFragment();
-    segments.forEach(([s,e])=>{
+    segments.forEach(([s,e],si)=>{
       if(e<=s)return;
       const [sn,so]=locate(s),[en,eo]=locate(e);
       const r=document.createRange();
@@ -1696,7 +1696,11 @@ function splitHighlightsByLine(){
       const piece=r.cloneContents(); // 내부 서식 보존한 조각
       const wrap=document.createElement('span');
       wrap.className='hl-mark';wrap.style.cssText=mark.style.cssText;
+      // 분할 후 재배치로 줄이 밀리지 않도록 조각 자체는 줄바꿈 금지
+      wrap.style.whiteSpace='pre';
       wrap.appendChild(piece);
+      // 원래 줄이 바뀌던 지점에 명시적 줄바꿈을 넣어 원본 배치를 고정
+      if(si>0)frag.appendChild(document.createElement('br'));
       frag.appendChild(wrap);
     });
     if(frag.childNodes.length>1)mark.parentNode.replaceChild(frag,mark);
@@ -1714,6 +1718,12 @@ $('#exportBtn').addEventListener('click',async()=>{
   try{
     if(document.fonts&&document.fonts.ready)await document.fonts.ready;
     await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+    // 캡처(onclone)에서 자간을 px로 고정하므로, 형광펜 줄분할 전에 원본도 동일 기준으로 맞춘다.
+    // (이게 어긋나면 break-all에서 줄바꿈 위치가 달라져 글자가 밀리거나 깨져 보임)
+    const lsPxPre=Math.round(state.ls/100*state.fSize);
+    const savedLS=flow.style.letterSpacing;
+    flow.style.letterSpacing=lsPxPre+'px';
+    await new Promise(r=>requestAnimationFrame(r));
     splitHighlightsByLine();
     await new Promise(r=>requestAnimationFrame(r));
     const W=canvasEl.offsetWidth,H=canvasEl.offsetHeight;
@@ -1739,7 +1749,7 @@ $('#exportBtn').addEventListener('click',async()=>{
       }
     });
     const a=document.createElement('a');a.download='발췌_'+Date.now()+'.png';a.href=canvas.toDataURL('image/png');a.click();
-  }catch(err){alert('저장 실패: '+err.message);}
+  }catch(err){console.error('export',err);if(typeof toast==='function')toast('저장 실패 · '+(typeof kkExplainErr==='function'?kkExplainErr(err):err.message),'err');}
   finally{
     // 형광펜 분할 원상복구
     $('#content').innerHTML=contentBackup;flow=$('#flow');flow.setAttribute('contenteditable','true');flow.style.userSelect='text';rebindAfterRestore();applyTextStyles();
@@ -2082,7 +2092,7 @@ async function exportHtml(){
     let offY=Math.max(htmlState.pad,(boardH-contentPx)/2);
     ctx.drawImage(canvas,0,Math.round(offY*sc));
     const a=document.createElement('a');a.download='HTML발췌_'+Date.now()+'.png';a.href=out.toDataURL('image/png');a.click();
-  }catch(err){alert('저장 실패: '+err.message+'\n(외부 리소스를 불러오는 HTML은 캡처가 제한될 수 있어요)');}
+  }catch(err){console.error('exportHtml',err);if(typeof toast==='function')toast('저장 실패 · '+(typeof kkExplainErr==='function'?kkExplainErr(err):err.message)+' (외부 리소스 HTML은 캡처 제한)','err');}
   finally{$('#htmlOuter').style.transform=savedT;emptyEl.style.display=wasEmpty;btn.textContent=old;btn.disabled=false;}
 }
 
