@@ -637,7 +637,7 @@ body.ui-dark .kk-root .toggle-row label{color:#ccc;}
     <button class="on">💬 카톡</button>
   </div>
   <span style="flex:1"></span>
-  <span style="font-size:9px;color:var(--ink-faint);opacity:.7;">v6.0808-1527</span>
+  <span style="font-size:9px;color:var(--ink-faint);opacity:.7;">v6.0808-1537</span>
   <span id="autosave-ind" style="font-size:10px;color:var(--ink-faint);">자동 저장 대기</span>
   <button class="btn" style="padding:4px 8px;" id="btn-undo" onclick="undo()" title="실행취소 (Ctrl+Z)">↶</button>
   <button class="btn" style="padding:4px 8px;" id="btn-redo" onclick="redo()" title="다시실행 (Ctrl+Shift+Z)">↷</button>
@@ -1147,7 +1147,10 @@ function applyTextStyles(){flow.style.setProperty('--pad',state.pad+'px');flow.s
   flow.querySelectorAll('.m-narr').forEach(e=>{e.style.color='';e.style.removeProperty('color');});
   flow.querySelectorAll('.m-dia').forEach(e=>{e.style.color='';e.style.removeProperty('color');});
   flow.querySelectorAll('.m-orig').forEach(e=>{e.style.color='';e.style.removeProperty('color');});
-  flow.querySelectorAll('.m-trans').forEach(e=>{e.style.color='';e.style.fontStyle='italic';e.style.fontSize='.82em';});}
+  // 번역 크기는 정수 px로 고정한다.
+  // (.82em 처럼 소수점 px가 되면 캡처 시 글자 폭 계산이 어긋나 겹쳐 그려짐)
+  const transPx=Math.max(6,Math.round(state.fSize*0.82));
+  flow.querySelectorAll('.m-trans').forEach(e=>{e.style.color='';e.style.fontStyle='italic';e.style.fontSize=transPx+'px';});}
 
 $('#vAlign').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$$('#vAlign button').forEach(x=>x.classList.remove('on'));b.classList.add('on');state.vAlign=b.dataset.v;flow.classList.remove('v-top','v-mid','v-bot');flow.classList.add('v-'+state.vAlign);});
 $('#hAlign').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const a=b.dataset.a;const sel=window.getSelection();if(sel.rangeCount&&!sel.isCollapsed&&flow.contains(sel.getRangeAt(0).commonAncestorContainer)){const range=sel.getRangeAt(0);const ps=new Set();flow.querySelectorAll('p').forEach(p=>{if(range.intersectsNode(p))ps.add(p);});if(ps.size)ps.forEach(p=>p.style.textAlign=a);}else{$$('#hAlign button').forEach(x=>x.classList.remove('on'));b.classList.add('on');state.hAlign=a;flow.style.textAlign=a;flow.querySelectorAll('p').forEach(p=>p.style.textAlign='');}});
