@@ -155,7 +155,8 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
 .m-dia{color:var(--c-dia,#FFFFFF)}
 .m-orig{color:var(--c-dia,#FFFFFF)}
 .m-trans{color:var(--c-trans,#B3B3B3)}
-.note{position:absolute;z-index:6;min-width:70px;max-width:300px;padding:8px 11px;border-radius:8px;font-family:'Nanum Gothic',sans-serif;font-size:13px;line-height:1.5}
+.note{position:absolute;z-index:6;min-width:70px;max-width:300px;padding:8px 11px;border-radius:8px;font-family:'Nanum Gothic',sans-serif;font-size:13px;line-height:1.5;touch-action:none}
+.note .body{touch-action:auto}
 .note.bg-on{box-shadow:0 2px 12px rgba(0,0,0,.14)}
 .note .body{outline:none;min-height:1em;cursor:text}
 .note .del{position:absolute;top:-10px;right:-10px;width:22px;height:22px;border-radius:50%;background:#ef5350;color:#fff;border:2px solid #fff;cursor:pointer;font-size:13px;display:none;align-items:center;justify-content:center;line-height:1;z-index:8}
@@ -636,7 +637,7 @@ body.ui-dark .kk-root .toggle-row label{color:#ccc;}
     <button class="on">💬 카톡</button>
   </div>
   <span style="flex:1"></span>
-  <span style="font-size:9px;color:var(--ink-faint);opacity:.7;">v6.0723-0404</span>
+  <span style="font-size:9px;color:var(--ink-faint);opacity:.7;">v6.0808-1506</span>
   <span id="autosave-ind" style="font-size:10px;color:var(--ink-faint);">자동 저장 대기</span>
   <button class="btn" style="padding:4px 8px;" id="btn-undo" onclick="undo()" title="실행취소 (Ctrl+Z)">↶</button>
   <button class="btn" style="padding:4px 8px;" id="btn-redo" onclick="redo()" title="다시실행 (Ctrl+Shift+Z)">↷</button>
@@ -952,7 +953,7 @@ body.ui-dark .kk-root .toggle-row label{color:#ccc;}
   <button data-go="style"><span class="ic">🎨</span>색·글꼴</button>
   <button data-go="bg"><span class="ic">🖼</span>배경</button>
   <button data-go="note"><span class="ic">📌</span>주석</button>
-  <button data-go="save"><span class="ic">💾</span>저장</button>
+  <button data-go="save"><span class="ic">💾</span>프리셋</button>
 </nav>
 
 <!-- floating format toolbar -->
@@ -1181,10 +1182,19 @@ function repositionFmtBar(){
   const rect=sel.getRangeAt(0).getBoundingClientRect();
   if(!rect.width&&!rect.height)return;
   const bw=fmtBar.offsetWidth||230,bh=fmtBar.offsetHeight||38;
+  const mob=isMobile();
+  const safeTop=mob?56:8;                 // 모바일 브라우저 상단 UI 회피
+  const safeBottom=mob?96:8;              // 하단 툴바/탭바 회피
   let left=rect.left+rect.width/2-bw/2;
   left=Math.max(8,Math.min(window.innerWidth-bw-8,left));
-  let top=rect.top-bh-8;
-  if(top<8)top=rect.bottom+8;
+  let top=rect.top-bh-10;                 // 기본: 선택 위
+  if(top<safeTop){                        // 위가 좁으면 아래로
+    top=rect.bottom+10;
+    if(top+bh>window.innerHeight-safeBottom){
+      // 아래도 좁으면 화면 중앙 근처 안전 위치
+      top=Math.max(safeTop,Math.min(window.innerHeight-safeBottom-bh,rect.top-bh-10));
+    }
+  }
   fmtBar.style.left=left+'px';fmtBar.style.top=top+'px';
 }
 function hideFmtBar(){fmtBar.classList.remove('on');fmtCtx=null;}
@@ -1651,7 +1661,28 @@ function flattenNestedHighlights(){
 function splitHighlightsByLine(){
   flattenNestedHighlights();
   // 형광펜을 줄 단위로 분할. 내부에 strong/em/u 등 서식이 있어도 처리.
+  // 주의: 분할 조각은 순수 인라인이어야 양끝정렬·문단 구조가 유지됨(br/pre 금지).
   flow.querySelectorAll('.hl-mark').forEach(mark=>{
+    // 원문/번역(@=) 블록처럼 내부에 <br>이 있으면 구조가 깨지므로
+    // <br> 기준으로 먼저 나눈 뒤 각 부분을 개별 형광펜으로 재구성한다.
+    if(mark.querySelector('br')){
+      const frag2=document.createDocumentFragment();
+      let cur=document.createElement('span');
+      cur.className='hl-mark';cur.style.cssText=mark.style.cssText;
+      [...mark.childNodes].forEach(n=>{
+        if(n.nodeName==='BR'){
+          if(cur.childNodes.length)frag2.appendChild(cur);
+          frag2.appendChild(document.createElement('br'));
+          cur=document.createElement('span');
+          cur.className='hl-mark';cur.style.cssText=mark.style.cssText;
+        }else{
+          cur.appendChild(n.cloneNode(true));
+        }
+      });
+      if(cur.childNodes.length)frag2.appendChild(cur);
+      mark.parentNode.replaceChild(frag2,mark);
+      return; // 재구성된 조각들은 다음 패스에서 줄 분할됨
+    }
     // 형광펜 span 내부의 모든 텍스트노드를 순서대로 수집
     const walker=document.createTreeWalker(mark,NodeFilter.SHOW_TEXT,null);
     const textNodes=[];let tnode;while(tnode=walker.nextNode())textNodes.push(tnode);
@@ -1696,11 +1727,7 @@ function splitHighlightsByLine(){
       const piece=r.cloneContents(); // 내부 서식 보존한 조각
       const wrap=document.createElement('span');
       wrap.className='hl-mark';wrap.style.cssText=mark.style.cssText;
-      // 분할 후 재배치로 줄이 밀리지 않도록 조각 자체는 줄바꿈 금지
-      wrap.style.whiteSpace='pre';
       wrap.appendChild(piece);
-      // 원래 줄이 바뀌던 지점에 명시적 줄바꿈을 넣어 원본 배치를 고정
-      if(si>0)frag.appendChild(document.createElement('br'));
       frag.appendChild(wrap);
     });
     if(frag.childNodes.length>1)mark.parentNode.replaceChild(frag,mark);
@@ -1725,6 +1752,7 @@ $('#exportBtn').addEventListener('click',async()=>{
     flow.style.letterSpacing=lsPxPre+'px';
     await new Promise(r=>requestAnimationFrame(r));
     splitHighlightsByLine();
+    splitHighlightsByLine(); // br 재구성분 줄 분할 (2패스)
     await new Promise(r=>requestAnimationFrame(r));
     const W=canvasEl.offsetWidth,H=canvasEl.offsetHeight;
     const canvas=await html2canvas(canvasEl,{
@@ -1736,7 +1764,8 @@ $('#exportBtn').addEventListener('click',async()=>{
       onclone:(doc)=>{
         const f=doc.getElementById('flow');
         if(f){
-          f.style.width=W+'px';
+          // 폭은 원본 레이아웃 그대로 사용(강제 지정 시 마지막 글자가 잘릴 수 있음)
+          f.style.boxSizing='border-box';
           const lsPx=Math.round(state.ls/100*state.fSize);
           f.style.letterSpacing=lsPx+'px';
           f.style.wordBreak=state.wordBreak;
