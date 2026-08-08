@@ -637,7 +637,7 @@ body.ui-dark .kk-root .toggle-row label{color:#ccc;}
     <button class="on">💬 카톡</button>
   </div>
   <span style="flex:1"></span>
-  <span style="font-size:9px;color:var(--ink-faint);opacity:.7;">v6.0808-1521</span>
+  <span style="font-size:9px;color:var(--ink-faint);opacity:.7;">v6.0808-1527</span>
   <span id="autosave-ind" style="font-size:10px;color:var(--ink-faint);">자동 저장 대기</span>
   <button class="btn" style="padding:4px 8px;" id="btn-undo" onclick="undo()" title="실행취소 (Ctrl+Z)">↶</button>
   <button class="btn" style="padding:4px 8px;" id="btn-redo" onclick="redo()" title="다시실행 (Ctrl+Shift+Z)">↷</button>
@@ -1733,6 +1733,38 @@ function splitHighlightsByLine(){
     if(frag.childNodes.length>1)mark.parentNode.replaceChild(frag,mark);
   });
 }
+async function ensureFontsReady(){
+  try{
+    if(!document.fonts)return;
+    // 현재 판에서 실제로 쓰이는 폰트 패밀리 수집
+    const fams=new Set();
+    const add=f=>{if(f)String(f).split(',').forEach(x=>{const n=x.trim().replace(/^['"]|['"]$/g,'');if(n&&!/^(sans-serif|serif|cursive|monospace|system-ui|-apple-system|BlinkMacSystemFont)$/i.test(n))fams.add(n);});};
+    add(state.font); add(state.noteFont);
+    flow.querySelectorAll('*').forEach(el=>{const f=el.style&&el.style.fontFamily;if(f)add(f);});
+    // 각 폰트를 실제 크기/굵기로 명시 로드
+    const sizes=[state.fSize+'px',(state.fSize*1.2)+'px','16px'];
+    const jobs=[];
+    fams.forEach(fam=>{
+      ['400','700'].forEach(w=>{
+        sizes.forEach(sz=>{
+          try{jobs.push(document.fonts.load(`${w} ${sz} "${fam}"`));}catch(_){}
+        });
+      });
+    });
+    await Promise.race([
+      Promise.all([document.fonts.ready,...jobs]),
+      new Promise(r=>setTimeout(r,4000))   // 최대 4초까지만 대기
+    ]);
+    // 렌더 안정화: 레이아웃이 두 프레임 연속 동일할 때까지
+    let last=-1;
+    for(let i=0;i<8;i++){
+      await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+      const h=Math.round(flow.getBoundingClientRect().height*10);
+      if(h===last)break;
+      last=h;
+    }
+  }catch(_){}
+}
 $('#exportBtn').addEventListener('click',async()=>{
   if(curMode==='html'){return exportHtml();}
   const btn=$('#exportBtn'),old=btn.textContent;btn.textContent='저장 중...';btn.disabled=true;
@@ -1743,7 +1775,10 @@ $('#exportBtn').addEventListener('click',async()=>{
   const tip=flow.querySelector('.empty-tip');if(tip)tip.style.display='none';
   const contentBackup=$('#content').innerHTML;  // 형광펜 분할 전 원본 보관
   try{
-    if(document.fonts&&document.fonts.ready)await document.fonts.ready;
+    // 폰트가 실제로 적용된 뒤 캡처해야 한다.
+    // fonts.ready 만으로는 display=swap 때문에 대체 폰트 상태에서 캡처될 수 있어
+    // 지금 쓰는 폰트/크기를 명시적으로 load() 하고 렌더 안정화를 기다린다.
+    await ensureFontsReady();
     await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
     // 캡처(onclone)에서 자간을 px로 고정하므로, 형광펜 줄분할 전에 원본도 동일 기준으로 맞춘다.
     // (이게 어긋나면 break-all에서 줄바꿈 위치가 달라져 글자가 밀리거나 깨져 보임)
@@ -2102,6 +2137,7 @@ async function exportHtml(){
     const doc=htmlFrame.contentDocument;
     if(!doc||!doc.body||!$('#htmlSrc').value.trim()){alert('먼저 HTML을 렌더링하세요.');return;}
     if(doc.fonts&&doc.fonts.ready)await doc.fonts.ready;
+    await new Promise(r=>setTimeout(r,120));
     await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
     // 최신 레이아웃 반영
     sizeHtmlFrame();
