@@ -387,11 +387,16 @@ body.mode-html .html-only{display:block}
 .kk-root #settings-box{background:var(--panel);border-radius:14px;padding:20px;width:440px;max-height:85vh;overflow-y:auto;display:flex;flex-direction:column;gap:12px;box-shadow:0 8px 40px rgba(0,0,0,.25);}
 .kk-root .settings-section{display:flex;flex-direction:column;gap:6px;}
 .kk-root .settings-section h5{font-size:11px;font-weight:700;color:#555;border-bottom:1px solid #eee;padding-bottom:4px;margin-bottom:2px;}
-.kk-root /* Toast */
-#toast-wrap{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;z-index:999;pointer-events:none;}
-.kk-root .toast{background:rgba(30,30,30,.92);color:#fff;padding:9px 18px;border-radius:20px;font-size:12px;box-shadow:0 4px 16px rgba(0,0,0,.2);animation:toastIn .2s ease;pointer-events:auto;}
-.kk-root .toast.err{background:#c0392b;}
-.kk-root .toast.ok{background:#27ae60;}
+/* Toast (모드 무관 · 카톡 스코프 밖) */
+#toast-wrap{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;align-items:center;z-index:999;pointer-events:none;}
+/* 모바일 하단 탭바에 가리지 않도록 (기본 규칙보다 뒤에 와야 덮인다) */
+@media (max-width:860px){
+  #toast-wrap{bottom:calc(76px + env(safe-area-inset-bottom))}
+  body.mode-kakao #toast-wrap{bottom:24px}
+}
+.toast{background:rgba(30,30,30,.92);color:#fff;padding:9px 18px;border-radius:20px;font-size:12px;line-height:1.5;max-width:min(92vw,420px);text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.2);animation:toastIn .2s ease;pointer-events:auto;}
+.toast.err{background:#c0392b;}
+.toast.ok{background:#27ae60;}
 @keyframes toastIn{from{opacity:0;transform:translateY(10px);}
 .kk-root to{opacity:1;transform:translateY(0);}
 }
@@ -639,7 +644,7 @@ body.ui-dark .kk-root .toggle-row label{color:#ccc;}
     <button class="on">💬 카톡</button>
   </div>
   <span style="flex:1"></span>
-  <span style="font-size:9px;color:var(--ink-faint);opacity:.7;">v6.0823-1402</span>
+  <span style="font-size:9px;color:var(--ink-faint);opacity:.7;">v6.0823-1437</span>
   <span id="autosave-ind" style="font-size:10px;color:var(--ink-faint);">자동 저장 대기</span>
   <button class="btn" style="padding:4px 8px;" id="btn-undo" onclick="undo()" title="실행취소 (Ctrl+Z)">↶</button>
   <button class="btn" style="padding:4px 8px;" id="btn-redo" onclick="redo()" title="다시실행 (Ctrl+Shift+Z)">↷</button>
@@ -945,10 +950,10 @@ body.ui-dark .kk-root .toggle-row label{color:#ccc;}
   </div>
 </div>
 
-<div id="toast-wrap"></div>
-
 
 </div>
+<!-- 토스트는 어느 모드에서도 보여야 하므로 카톡 컨테이너 밖에 둔다 -->
+<div id="toast-wrap"></div>
 <nav class="mobile-tabbar" id="tabbar">
   <button data-go="text"><span class="ic">✎</span>텍스트</button>
   <button data-go="align"><span class="ic">≡</span>정렬</button>
@@ -1151,10 +1156,12 @@ function warmFonts(){
     try{
       if(!document.fonts||!flow)return;
       const fams=new Set();
-      String(state.font||'').split(',').forEach(x=>{
+      const addFam=v=>String(v||'').split(',').forEach(x=>{
         const n=x.trim().replace(/^['"]|['"]$/g,'');
         if(n&&!/^(sans-serif|serif|cursive|monospace|system-ui|-apple-system|BlinkMacSystemFont)$/i.test(n))fams.add(n);
       });
+      addFam(state.font);addFam(state.noteFont);
+      flow.querySelectorAll('*').forEach(el=>{if(el.style&&el.style.fontFamily)addFam(el.style.fontFamily);});
       const text=Array.from(new Set(Array.from(flow.textContent||''))).join('').slice(0,900);
       if(!text)return;
       fams.forEach(fam=>{
@@ -1866,7 +1873,10 @@ function glyphOverflowRatio(){
     total++;
     rng.selectNodeContents(s);
     const w=rng.getBoundingClientRect().width*k;
-    if(w>bw+1.5)bad++;
+    // 이탤릭/오블리크는 글자가 기울어 자기 진행폭 밖으로 삐져나온다. 그만큼 여유를 준다.
+    const cs=getComputedStyle(s);
+    const slant=(cs.fontStyle&&cs.fontStyle!=='normal')?(parseFloat(cs.fontSize)||0)*0.22:0;
+    if(w>bw+1.5+slant)bad++;
   });
   return total?bad/total:0;
 }
@@ -2075,6 +2085,13 @@ $('#exportBtn').addEventListener('click',async()=>{
     try{document.fonts&&document.fonts.removeEventListener('loadingdone',onFontDone);}catch(_){}
     exportDiag={frozen:glyphFrozen,overflow:+lastOverflow.toFixed(3),lateFont:fontArrived};
     console.log('[발췌기] 정밀맞춤',exportDiag);
+    // 캡처 직전 마지막 확인: 아직 받는 중인 폰트가 있으면 기다린다
+    try{
+      for(let i=0;i<20&&document.fonts&&document.fonts.status==='loading';i++){
+        await new Promise(r=>setTimeout(r,100));
+      }
+      await document.fonts.ready;
+    }catch(_){}
     const W=canvasEl.offsetWidth,H=canvasEl.offsetHeight;
     const canvas=await html2canvas(canvasEl,{
       scale:+$('#scale').value,
