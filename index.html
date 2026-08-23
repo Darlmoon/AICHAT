@@ -143,13 +143,14 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
 #canvas.bg-edit .bg-layer img{cursor:grab;touch-action:none}
 .sel-box .mv,.sel-box .h{touch-action:none}
 #canvas .content{position:relative;z-index:2;height:100%;overflow:hidden}
-.text-flow{position:absolute;left:0;right:0;padding:var(--pad,40px);white-space:pre-wrap;word-break:break-all;overflow-wrap:anywhere}
+.text-flow{position:absolute;left:0;right:0;padding:var(--pad,40px);white-space:pre-wrap}
 .text-flow.v-top{top:0}
 .text-flow.v-mid{top:50%;transform:translateY(-50%)}
 .text-flow.v-bot{bottom:0}
 .text-flow p{margin:0 0 var(--pgap,14px)}
 .text-flow p:last-child{margin-bottom:0}
 .narr-italic .m-narr{font-style:italic}
+.dia-bold .m-dia,.dia-bold .m-orig{font-weight:700}
 .m-quote{display:block;border-left:3px solid currentColor;padding-left:14px;margin:6px 0;opacity:.92;font-style:italic}
 .m-narr{color:var(--c-narr,#B3B3B3)}
 .m-dia{color:var(--c-dia,#FFFFFF)}
@@ -486,6 +487,7 @@ body.ui-dark .kk-root .toggle-row label{color:#ccc;}
         <div class="color-row"><label>지문 색상</label><button class="swatch-btn" id="sw-cNarr"></button></div>
         <div class="color-row"><label>번역 색상</label><button class="swatch-btn" id="sw-cTrans"></button></div>
         <div class="toggle-row"><span>지문 이탤릭체</span><label class="sw"><input type="checkbox" id="narrItalic"><span class="track"></span></label></div>
+        <div class="toggle-row"><span>대사 굵게</span><label class="sw"><input type="checkbox" id="diaBold"><span class="track"></span></label></div>
         <div class="toggle-row"><span>대사 따옴표 표시</span><label class="sw"><input type="checkbox" id="showQuotes"><span class="track"></span></label></div>
         <label class="f">본문 글씨체</label><select id="font"></select>
         <div class="slider-row"><label>글자 크기</label><input type="range" id="fSize" min="8" max="24" value="11"><span class="val" id="fSizeV">11</span><button class="rst" data-rst="fSize">↺</button></div>
@@ -637,7 +639,7 @@ body.ui-dark .kk-root .toggle-row label{color:#ccc;}
     <button class="on">💬 카톡</button>
   </div>
   <span style="flex:1"></span>
-  <span style="font-size:9px;color:var(--ink-faint);opacity:.7;">v6.0808-1537</span>
+  <span style="font-size:9px;color:var(--ink-faint);opacity:.7;">v6.0823-0855</span>
   <span id="autosave-ind" style="font-size:10px;color:var(--ink-faint);">자동 저장 대기</span>
   <button class="btn" style="padding:4px 8px;" id="btn-undo" onclick="undo()" title="실행취소 (Ctrl+Z)">↶</button>
   <button class="btn" style="padding:4px 8px;" id="btn-redo" onclick="redo()" title="다시실행 (Ctrl+Shift+Z)">↷</button>
@@ -1025,7 +1027,7 @@ noteFontSel.value="'Nanum Gothic','Noto Sans KR',sans-serif";
 const PALETTE=['#FFFFFF','#F2F2F2','#D9D9D9','#BFBFBF','#999999','#666666','#404040','#1A1A1A','#000000','#B3B3B3','#FBD3D3','#FCE3C9','#FBF3C4','#E4F3C9','#CDEFD6','#C9EEF0','#CFE0FB','#D9D2F7','#F0D4F2','#F7D7E6','#F49B9B','#F5BE84','#F0DC72','#BFE08A','#8FD8A8','#82CFD6','#8FB6F0','#A99CE6','#D89BE0','#E89CBE'];
 const HL_PASTEL=['#FFF3A8','#FFD6C4','#C8F2D4','#C4E4FB','#E5D2F7','#FBD3E2'];
 const HL_MUTED=['#D4C77A','#D1A78C','#9CC4A6','#90A8C2','#B09CC2','#C29CAC'];
-const state={ratio:'3:4',cw:560,pad:40,paraGap:14,fSize:11,lh:1.8,ls:0,font:"'Noto Sans KR',sans-serif",cDia:'#FFFFFF',cNarr:'#B3B3B3',cTrans:'#B3B3B3',showQuotes:false,narrItalic:false,hlColor:'#FFF3A8',hlOpac:.6,vAlign:'mid',hAlign:'left',bg:null,bgScale:1,bgOpac:.6,bgX:0,bgY:0,board:'#1A1A1A',bgEdit:false,noteFont:"'Nanum Gothic','Noto Sans KR',sans-serif",noteBg:'#FFF3A8',noteFg:'#999999',noteBgOn:false,noteArrow:false,noteSize:7,theme:'dark',zoom:null,recent:[],creditOn:false,creditAuthor:'',creditChar:'',creditSep:' | ',creditColor:'#888888',creditSize:9,wordBreak:'break-all',creditAlign:'center',quoteColor:'#7C9CBF'};
+const state={ratio:'3:4',cw:560,pad:40,paraGap:14,fSize:11,lh:1.8,ls:0,font:"'Noto Sans KR',sans-serif",cDia:'#FFFFFF',cNarr:'#B3B3B3',cTrans:'#B3B3B3',showQuotes:false,narrItalic:false,diaBold:false,hlColor:'#FFF3A8',hlOpac:.6,vAlign:'mid',hAlign:'left',bg:null,bgScale:1,bgOpac:.6,bgX:0,bgY:0,board:'#1A1A1A',bgEdit:false,noteFont:"'Nanum Gothic','Noto Sans KR',sans-serif",noteBg:'#FFF3A8',noteFg:'#999999',noteBgOn:false,noteArrow:false,noteSize:7,theme:'dark',zoom:null,recent:[],creditOn:false,creditAuthor:'',creditChar:'',creditSep:' | ',creditColor:'#888888',creditSize:9,wordBreak:'break-all',creditAlign:'center',quoteColor:'#7C9CBF'};
 
 function hexToRgba(hex,a){const h=hex.replace('#','');const f=h.length===3?h.split('').map(x=>x+x).join(''):h;const n=parseInt(f,16);return`rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;}
 function applyTheme(t){state.theme=t;if(t==='dark'){state.board='#1A1A1A';state.cDia='#FFFFFF';state.cNarr='#B3B3B3';state.cTrans='#B3B3B3';}else{state.board='#FFFFFF';state.cDia='#1A1A1A';state.cNarr='#8A8A8A';state.cTrans='#9A9A9A';}refreshSwatches();applyCanvas();applyTextStyles();}
@@ -1139,7 +1141,7 @@ $('#applyBtn').addEventListener('click',()=>{
 });
 flow.setAttribute('contenteditable','true');flow.style.userSelect='text';
 
-function applyTextStyles(){flow.style.setProperty('--pad',state.pad+'px');flow.style.setProperty('--pgap',state.paraGap+'px');flow.style.fontSize=state.fSize+'px';flow.style.lineHeight=state.lh;flow.style.letterSpacing=state.ls/100+'em';flow.style.fontFamily=state.font;flow.style.textAlign=state.hAlign;flow.style.wordBreak=state.wordBreak;flow.style.overflowWrap=(state.wordBreak==='break-all'?'anywhere':'break-word');flow.classList.toggle('narr-italic',state.narrItalic);
+function applyTextStyles(){flow.style.setProperty('--pad',state.pad+'px');flow.style.setProperty('--pgap',state.paraGap+'px');flow.style.fontSize=state.fSize+'px';flow.style.lineHeight=state.lh;flow.style.letterSpacing=state.ls/100+'em';flow.style.fontFamily=state.font;flow.style.textAlign=state.hAlign;flow.style.wordBreak=state.wordBreak;flow.style.overflowWrap=(state.wordBreak==='break-all'?'anywhere':'break-word');flow.classList.toggle('narr-italic',state.narrItalic);flow.classList.toggle('dia-bold',state.diaBold);
   // 색은 CSS 변수로 지정 → 드래그로 넣은 자식 span의 색(style.color)이 우선하도록
   flow.style.setProperty('--c-narr',state.cNarr);
   flow.style.setProperty('--c-dia',state.cDia);
@@ -1612,6 +1614,7 @@ bindRange('hlOpac',()=>{state.hlOpac=+$('#hlOpac').value/100;$('#hlOpacV').textC
 bindRange('noteSize',()=>{state.noteSize=+$('#noteSize').value;$('#noteSizeV').textContent=state.noteSize;updateNotesStyle();});
 $('#showQuotes').addEventListener('change',e=>{if(hasManualFormatting()&&!confirm('따옴표 표시를 바꾸면 본문이 다시 그려져 수동 서식이 사라집니다. 계속할까요?')){e.target.checked=!e.target.checked;return;}state.showQuotes=e.target.checked;pushHistory();buildFromMarkup();});
 $('#narrItalic').addEventListener('change',e=>{state.narrItalic=e.target.checked;applyTextStyles();});
+$('#diaBold').addEventListener('change',e=>{state.diaBold=e.target.checked;applyTextStyles();});
 $('#wbSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$$('#wbSeg button').forEach(x=>x.classList.remove('on'));b.classList.add('on');state.wordBreak=b.dataset.wb;applyTextStyles();});
 $('#creditOn').addEventListener('change',e=>{state.creditOn=e.target.checked;renderCredit();});
 $('#creditAuthor').addEventListener('input',e=>{state.creditAuthor=e.target.value;renderCredit();});
@@ -1728,12 +1731,61 @@ function splitHighlightsByLine(){
       const r=document.createRange();
       r.setStart(sn,so);r.setEnd(en,eo);
       const piece=r.cloneContents(); // 내부 서식 보존한 조각
+      // Range가 서식 태그 "안쪽"을 가리키면 조상 태그(strong/em/u 등)가
+      // 복제본에 빠진다 → 조각의 시작 노드 기준으로 조상 서식을 다시 씌운다.
+      let wrapped=piece;
+      const FMT=/^(STRONG|B|EM|I|U|S|SPAN)$/;
+      let anc=sn.nodeType===3?sn.parentNode:sn;
+      const chain=[];
+      while(anc&&anc!==mark&&mark.contains(anc)){
+        if(FMT.test(anc.nodeName))chain.push(anc);
+        anc=anc.parentNode;
+      }
+      // 안쪽부터 바깥쪽 순서로 다시 감싼다
+      chain.forEach(node=>{
+        const clone=node.cloneNode(false); // 속성만 복사
+        clone.appendChild(wrapped);
+        wrapped=clone;
+      });
       const wrap=document.createElement('span');
       wrap.className='hl-mark';wrap.style.cssText=mark.style.cssText;
-      wrap.appendChild(piece);
+      wrap.appendChild(wrapped);
       frag.appendChild(wrap);
     });
     if(frag.childNodes.length>1)mark.parentNode.replaceChild(frag,mark);
+  });
+}
+/* 캡처 라이브러리는 word-break:break-all 을 지원하지 않아 줄바꿈을 스스로
+   단어 단위로 다시 계산한다 → 화면과 줄이 달라져 글자가 겹친다.
+   그래서 캡처 직전에 현재 화면의 줄바꿈 위치를 실제 <br>로 굳혀 넣는다. */
+function freezeLineBreaks(){
+  flow.querySelectorAll('p').forEach(p=>{
+    const walker=document.createTreeWalker(p,NodeFilter.SHOW_TEXT,null);
+    const nodes=[];let tn;while(tn=walker.nextNode())nodes.push(tn);
+    nodes.forEach(node=>{
+      const t=node.textContent;
+      if(!t||!t.trim())return;
+      const rng=document.createRange();
+      let curTop=null;const cuts=[];
+      for(let i=0;i<t.length;i++){
+        rng.setStart(node,i);rng.setEnd(node,i+1);
+        const rect=rng.getBoundingClientRect();
+        if(!rect.height)continue;
+        const top=Math.round(rect.top);
+        if(curTop===null){curTop=top;continue;}
+        if(Math.abs(top-curTop)>2){cuts.push(i);curTop=top;}
+      }
+      if(!cuts.length)return;
+      let ref=node;
+      for(let k=cuts.length-1;k>=0;k--){
+        const tail=ref.splitText(cuts[k]);
+        const br=document.createElement('br');
+        br.setAttribute('data-frozen','1');
+        ref.parentNode.insertBefore(br,tail);
+        // 줄 끝 공백은 제거(white-space:pre 에서 그대로 그려져 밀림 유발)
+        ref.textContent=ref.textContent.replace(/[ \t]+$/,'');
+      }
+    });
   });
 }
 async function ensureFontsReady(){
@@ -1805,6 +1857,9 @@ $('#exportBtn').addEventListener('click',async()=>{
       flow.setAttribute('contenteditable','true');flow.style.userSelect='text';
       await new Promise(r=>requestAnimationFrame(r));
     }
+    // 캡처 라이브러리가 줄바꿈을 다시 계산하지 못하도록 현재 줄을 <br>로 굳힌다.
+    freezeLineBreaks();
+    await new Promise(r=>requestAnimationFrame(r));
     const W=canvasEl.offsetWidth,H=canvasEl.offsetHeight;
     const canvas=await html2canvas(canvasEl,{
       scale:+$('#scale').value,
@@ -1821,8 +1876,12 @@ $('#exportBtn').addEventListener('click',async()=>{
             const lsPx=Math.round(state.ls/100*state.fSize);
             f.style.letterSpacing=lsPx+'px';
           }
-          f.style.wordBreak=state.wordBreak;
-          f.style.overflowWrap=(state.wordBreak==='break-all'?'anywhere':'break-word');
+          // 줄바꿈은 freezeLineBreaks()가 넣은 <br>만 따르게 완전 고정한다.
+          // white-space:pre 는 자동 줄바꿈을 아예 하지 않으므로 라이브러리가
+          // break-all/keep-all 을 자체 계산해 화면과 어긋나는 일이 없다.
+          f.style.whiteSpace='pre';
+          f.style.wordBreak='normal';
+          f.style.overflowWrap='normal';
           f.style.setProperty('--c-narr',state.cNarr);
           f.style.setProperty('--c-dia',state.cDia);
           f.style.setProperty('--c-trans',state.cTrans);
@@ -1883,11 +1942,11 @@ $('#stage').addEventListener('pointerdown',e=>{if(state.bgEdit)return;if(isMobil
 buildPalGrid();buildRecent();refreshSwatches();$('#fmtHlSw').style.background=state.hlColor;$('#fmtTcSw').style.background=state.noteFg;
 
 /* ===== save / load work + presets ===== */
-const STYLE_KEYS=['pad','paraGap','fSize','lh','ls','font','cDia','cNarr','cTrans','showQuotes','narrItalic','hlColor','hlOpac','noteFont','noteBg','noteFg','noteBgOn','noteArrow','noteSize','vAlign','hAlign'];
+const STYLE_KEYS=['pad','paraGap','fSize','lh','ls','font','cDia','cNarr','cTrans','showQuotes','narrItalic','diaBold','hlColor','hlOpac','noteFont','noteBg','noteFg','noteBgOn','noteArrow','noteSize','vAlign','hAlign','board','wordBreak','quoteColor','creditColor','creditSize','creditAlign','theme'];
 function collectWork(){
   const o={v:1,src:$('#src').value,state:{},content:$('#content').innerHTML,ratio:state.ratio,cw:state.cw,theme:state.theme,bg:state.bg,bgScale:state.bgScale,bgOpac:state.bgOpac,bgX:state.bgX,bgY:state.bgY,board:state.board,
     htmlSrc:$('#htmlSrc')?$('#htmlSrc').value:'',htmlState:(typeof htmlState!=='undefined')?{...htmlState}:null};
-  ['pad','paraGap','fSize','lh','ls','font','cDia','cNarr','cTrans','showQuotes','narrItalic','hlColor','hlOpac','noteFont','noteBg','noteFg','noteBgOn','noteArrow','noteSize','vAlign','hAlign','recent','creditOn','creditAuthor','creditChar','creditSep','creditColor','creditSize','wordBreak','creditAlign','quoteColor'].forEach(k=>o.state[k]=state[k]);
+  ['pad','paraGap','fSize','lh','ls','font','cDia','cNarr','cTrans','showQuotes','narrItalic','diaBold','hlColor','hlOpac','noteFont','noteBg','noteFg','noteBgOn','noteArrow','noteSize','vAlign','hAlign','recent','creditOn','creditAuthor','creditChar','creditSep','creditColor','creditSize','wordBreak','creditAlign','quoteColor'].forEach(k=>o.state[k]=state[k]);
   return o;
 }
 function applyWork(o){
@@ -1905,7 +1964,7 @@ function applyWork(o){
   $('#font').value=state.font;$('#noteFont').value=state.noteFont;
   $('#hlOpac').value=Math.round(state.hlOpac*100);$('#hlOpacV').textContent=Math.round(state.hlOpac*100)+'%';
   $('#noteSize').value=state.noteSize;$('#noteSizeV').textContent=state.noteSize;
-  $('#showQuotes').checked=state.showQuotes;$('#narrItalic').checked=state.narrItalic;$('#noteBgOn').checked=state.noteBgOn;$('#noteArrow').checked=state.noteArrow;
+  $('#showQuotes').checked=state.showQuotes;$('#narrItalic').checked=state.narrItalic;$('#diaBold').checked=!!state.diaBold;$('#noteBgOn').checked=state.noteBgOn;$('#noteArrow').checked=state.noteArrow;
   $('#creditOn').checked=!!state.creditOn;$('#creditAuthor').value=state.creditAuthor||'';$('#creditChar').value=state.creditChar||'';$('#creditSep').value=state.creditSep||' | ';$('#creditSize').value=state.creditSize||9;$('#creditSizeV').textContent=state.creditSize||9;
   state.wordBreak=state.wordBreak||'break-all';state.creditAlign=state.creditAlign||'center';state.quoteColor=state.quoteColor||'#7C9CBF';
   $$('#wbSeg button').forEach(b=>b.classList.toggle('on',b.dataset.wb===state.wordBreak));
@@ -1967,12 +2026,16 @@ function applyPreset(p){
   $('#font').value=state.font;$('#noteFont').value=state.noteFont;
   $('#hlOpac').value=Math.round(state.hlOpac*100);$('#hlOpacV').textContent=Math.round(state.hlOpac*100)+'%';
   $('#noteSize').value=state.noteSize;$('#noteSizeV').textContent=state.noteSize;
-  $('#showQuotes').checked=state.showQuotes;$('#narrItalic').checked=state.narrItalic;$('#noteBgOn').checked=state.noteBgOn;$('#noteArrow').checked=state.noteArrow;
+  $('#showQuotes').checked=state.showQuotes;$('#narrItalic').checked=state.narrItalic;$('#diaBold').checked=!!state.diaBold;$('#noteBgOn').checked=state.noteBgOn;$('#noteArrow').checked=state.noteArrow;
   $$('#vAlign button').forEach(b=>b.classList.toggle('on',b.dataset.v===state.vAlign));
   $$('#hAlign button').forEach(b=>b.classList.toggle('on',b.dataset.a===state.hAlign));
   refreshSwatches();
+  $$('#wbSeg button').forEach(b=>b.classList.toggle('on',b.dataset.wb===state.wordBreak));
+  $$('#creditAlignSeg button').forEach(b=>b.classList.toggle('on',b.dataset.ca===state.creditAlign));
+  $('#creditSize').value=state.creditSize||9;$('#creditSizeV').textContent=state.creditSize||9;
+  $$('#themePills button').forEach(b=>b.classList.toggle('on',b.dataset.t===state.theme));
   flow.classList.remove('v-top','v-mid','v-bot');flow.classList.add('v-'+state.vAlign);
-  applyTextStyles();updateNotesStyle();
+  applyCanvas();applyTextStyles();updateNotesStyle();renderCredit();
 }
 $('#savePreset').addEventListener('click',()=>{
   const name=($('#presetName').value.trim())||('프리셋 '+(loadPresets().length+1));
