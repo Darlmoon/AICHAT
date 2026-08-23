@@ -639,7 +639,7 @@ body.ui-dark .kk-root .toggle-row label{color:#ccc;}
     <button class="on">💬 카톡</button>
   </div>
   <span style="flex:1"></span>
-  <span style="font-size:9px;color:var(--ink-faint);opacity:.7;">v6.0823-0855</span>
+  <span style="font-size:9px;color:var(--ink-faint);opacity:.7;">v6.0823-1159</span>
   <span id="autosave-ind" style="font-size:10px;color:var(--ink-faint);">자동 저장 대기</span>
   <button class="btn" style="padding:4px 8px;" id="btn-undo" onclick="undo()" title="실행취소 (Ctrl+Z)">↶</button>
   <button class="btn" style="padding:4px 8px;" id="btn-redo" onclick="redo()" title="다시실행 (Ctrl+Shift+Z)">↷</button>
@@ -1788,6 +1788,86 @@ function freezeLineBreaks(){
     });
   });
 }
+/* 캡처 라이브러리는 "클론(iframe) 문서에서 잰 좌표"에 "메인 문서의 폰트"로 글자를 다시 그린다.
+   클론 쪽 폰트 상태가 화면과 조금이라도 다르면(모바일에서 웹폰트 서브셋/700굵기 로딩이 늦을 때
+   자주 발생) 좌표는 좁게 잡히고 글자는 넓게 그려져 글자가 서로 겹쳐 뭉친다.
+   공백은 라이브러리가 글리프로 그리지 않고 "다음 단어의 좌표"로만 표현하므로 통째로 증발한다.
+   → 화면에서 잰 각 글자의 실제 진행폭(advance)을 고정폭 상자로 굳혀 라이브러리가
+     좌표를 다시 계산할 여지를 없앤다.
+
+   ⚠ 줄바꿈 고정(<br> 삽입)과 반드시 "한 번에" 처리해야 한다.
+   <br>을 먼저 넣으면 모든 줄이 문단의 마지막 줄이 되어 그 순간 양끝정렬이 풀린다.
+   그 뒤에 좌표를 재면 풀린 상태가 그대로 굳어 저장본이 왼쪽정렬처럼 나온다. */
+function freezeTextLayout(){
+  // 판이 축소 표시(모바일 맞춤 배율)돼 있으면 getBoundingClientRect 값이 배율만큼 작다.
+  // 상자 폭은 CSS px로 넣어야 하므로 배율을 되돌린다.
+  const k=(()=>{const w=flow.offsetWidth,r=flow.getBoundingClientRect().width;return(w&&r)?w/r:1;})();
+  const plans=[];
+  flow.querySelectorAll('p').forEach(p=>{
+    const walker=document.createTreeWalker(p,NodeFilter.SHOW_TEXT,null);
+    const nodes=[];let tn;while(tn=walker.nextNode()){if(tn.textContent)nodes.push(tn);}
+    if(!nodes.length)return;
+    // 1) 문단 전체의 글자 좌표를 먼저 전부 잰다(아직 DOM은 건드리지 않는다)
+    const rng=document.createRange(),met=[];
+    for(const node of nodes){
+      const chars=Array.from(node.textContent); // 서로게이트쌍(이모지) 보호
+      let off=0;
+      for(const ch of chars){
+        rng.setStart(node,off);rng.setEnd(node,off+ch.length);
+        const r=rng.getBoundingClientRect();
+        met.push({node,off,len:ch.length,ch,left:r.left,right:r.right,top:Math.round(r.top)});
+        off+=ch.length;
+      }
+    }
+    if(!met.length)return;
+    // 2) 줄이 바뀌는 지점 표시. 원문/번역처럼 이미 <br>이 있는 자리엔 또 넣지 않는다.
+    const chk=document.createRange();
+    for(let i=1;i<met.length;i++){
+      const cur=met[i],prev=met[i-1];
+      if(Math.abs(cur.top-prev.top)<=2)continue;
+      cur.lineStart=true;
+      let hasBr=false;
+      try{
+        chk.setStart(prev.node,prev.off+prev.len);chk.setEnd(cur.node,cur.off);
+        hasBr=!!chk.cloneContents().querySelector('br');
+      }catch(e){}
+      cur.needBr=!hasBr;
+    }
+    // 3) 진행폭 = 같은 줄 다음 글자의 시작점까지. 줄 끝/마지막 글자는 자기 폭.
+    for(let i=0;i<met.length;i++){
+      const m=met[i],nx=met[i+1];
+      const same=nx&&Math.abs(nx.top-m.top)<=2&&nx.left>=m.left;
+      m.adv=Math.round((same?(nx.left-m.left):Math.max(0,m.right-m.left))*k*100)/100;
+    }
+    // 4) 줄 끝 공백은 버린다(white-space:pre 에서 그대로 그려져 밀림 유발)
+    for(let i=0;i<met.length;i++){
+      if(!met[i].lineStart)continue;
+      let j=i-1;while(j>=0&&(met[j].ch===' '||met[j].ch==='\t')){met[j].skip=true;j--;}
+    }
+    const byNode=new Map();
+    met.forEach(m=>{if(!byNode.has(m.node))byNode.set(m.node,[]);byNode.get(m.node).push(m);});
+    byNode.forEach((items,node)=>plans.push({node,items}));
+  });
+  if(!plans.length)return false;
+  // 5) 측정이 끝난 뒤에 한꺼번에 교체
+  for(const {node,items} of plans){
+    const frag=document.createDocumentFragment();
+    for(const m of items){
+      if(m.needBr){const br=document.createElement('br');br.setAttribute('data-frozen','1');frag.appendChild(br);}
+      if(m.skip)continue;
+      const s=document.createElement('span');
+      s.setAttribute('data-glyph','1');
+      s.style.cssText='display:inline-block;width:'+m.adv+'px;white-space:pre;letter-spacing:normal;word-spacing:normal;text-indent:0;vertical-align:baseline';
+      s.textContent=m.ch;
+      frag.appendChild(s);
+    }
+    if(node.parentNode)node.parentNode.replaceChild(frag,node);
+  }
+  // 자간/어간은 이미 상자 폭에 반영됐다. 남겨두면 상자마다 덧붙어 밀린다.
+  flow.style.letterSpacing='normal';
+  flow.style.wordSpacing='normal';
+  return true;
+}
 async function ensureFontsReady(){
   try{
     if(!document.fonts)return;
@@ -1857,9 +1937,33 @@ $('#exportBtn').addEventListener('click',async()=>{
       flow.setAttribute('contenteditable','true');flow.style.userSelect='text';
       await new Promise(r=>requestAnimationFrame(r));
     }
-    // 캡처 라이브러리가 줄바꿈을 다시 계산하지 못하도록 현재 줄을 <br>로 굳힌다.
-    freezeLineBreaks();
-    await new Promise(r=>requestAnimationFrame(r));
+    // 줄바꿈 + 글자 진행폭을 한 번에 고정한다.
+    // (줄바꿈을 먼저 넣으면 그 순간 양끝정렬이 풀려 그 상태가 굳어버린다)
+    let glyphFrozen=false;
+    const preFreezeHTML=$('#content').innerHTML;
+    const preFreezeH=flow.getBoundingClientRect().height;
+    // 줄 끝 공백은 의도적으로 버리므로 공백을 모두 뺀 상태로 대조한다
+    const preFreezeText=flow.textContent.replace(/\s+/g,'');
+    const savedLS2=flow.style.letterSpacing,savedWS2=flow.style.wordSpacing;
+    try{
+      glyphFrozen=freezeTextLayout();
+      if(glyphFrozen){
+        await new Promise(r=>requestAnimationFrame(r));
+        if(Math.abs(flow.getBoundingClientRect().height-preFreezeH)>1
+           ||flow.textContent.replace(/\s+/g,'')!==preFreezeText){
+          glyphFrozen=false;
+        }
+      }
+    }catch(e){console.warn('freezeTextLayout',e);glyphFrozen=false;}
+    if(!glyphFrozen){
+      // 원복 후 기존 방식(줄바꿈만 고정)으로 폴백
+      $('#content').innerHTML=preFreezeHTML;flow=$('#flow');
+      flow.setAttribute('contenteditable','true');flow.style.userSelect='text';
+      flow.style.letterSpacing=savedLS2;flow.style.wordSpacing=savedWS2;
+      await new Promise(r=>requestAnimationFrame(r));
+      freezeLineBreaks();
+      await new Promise(r=>requestAnimationFrame(r));
+    }
     const W=canvasEl.offsetWidth,H=canvasEl.offsetHeight;
     const canvas=await html2canvas(canvasEl,{
       scale:+$('#scale').value,
@@ -1872,7 +1976,10 @@ $('#exportBtn').addEventListener('click',async()=>{
         if(f){
           // 폭은 원본 레이아웃 그대로 사용(강제 지정 시 마지막 글자가 잘릴 수 있음)
           f.style.boxSizing='border-box';
-          if(state.ls){
+          if(glyphFrozen){
+            // 자간은 이미 글자 상자 폭에 반영돼 있다. 여기서 또 주면 상자마다 덧붙어 밀린다.
+            f.style.letterSpacing='normal';f.style.wordSpacing='normal';
+          }else if(state.ls){
             const lsPx=Math.round(state.ls/100*state.fSize);
             f.style.letterSpacing=lsPx+'px';
           }
