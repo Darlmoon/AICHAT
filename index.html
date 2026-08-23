@@ -639,7 +639,7 @@ body.ui-dark .kk-root .toggle-row label{color:#ccc;}
     <button class="on">💬 카톡</button>
   </div>
   <span style="flex:1"></span>
-  <span style="font-size:9px;color:var(--ink-faint);opacity:.7;">v6.0823-1217</span>
+  <span style="font-size:9px;color:var(--ink-faint);opacity:.7;">v6.0823-1309</span>
   <span id="autosave-ind" style="font-size:10px;color:var(--ink-faint);">자동 저장 대기</span>
   <button class="btn" style="padding:4px 8px;" id="btn-undo" onclick="undo()" title="실행취소 (Ctrl+Z)">↶</button>
   <button class="btn" style="padding:4px 8px;" id="btn-redo" onclick="redo()" title="다시실행 (Ctrl+Shift+Z)">↷</button>
@@ -1798,6 +1798,32 @@ function freezeLineBreaks(){
    ⚠ 줄바꿈 고정(<br> 삽입)과 반드시 "한 번에" 처리해야 한다.
    <br>을 먼저 넣으면 모든 줄이 문단의 마지막 줄이 되어 그 순간 양끝정렬이 풀린다.
    그 뒤에 좌표를 재면 풀린 상태가 그대로 굳어 저장본이 왼쪽정렬처럼 나온다. */
+/* 레이아웃 지문: 높이뿐 아니라 "글자 폭"까지 반영한다.
+   폰트가 뒤늦게 바뀌어도 줄 수가 같으면 높이는 그대로라, 높이만 보면 폰트 교체를 놓친다.
+   각 줄의 오른쪽 끝 위치를 함께 넣어 폭 변화를 잡는다. */
+let exportDiag=null;
+function layoutFingerprint(){
+  const fb=flow.getBoundingClientRect();
+  const parts=[Math.round(fb.height*10)];
+  const rng=document.createRange();
+  flow.querySelectorAll('p').forEach(p=>{
+    const w=document.createTreeWalker(p,NodeFilter.SHOW_TEXT,null);
+    const lines=new Map();let n;
+    while(n=w.nextNode()){
+      const t=n.textContent;if(!t)continue;
+      for(let i=0;i<t.length;i++){
+        if(!t[i].trim())continue;
+        rng.setStart(n,i);rng.setEnd(n,i+1);
+        const r=rng.getBoundingClientRect();
+        if(!r.height)continue;
+        const k=Math.round(r.top);
+        lines.set(k,Math.max(lines.get(k)||0,r.right-fb.left));
+      }
+    }
+    [...lines.entries()].sort((a,b)=>a[0]-b[0]).forEach(([,x])=>parts.push(Math.round(x*10)));
+  });
+  return parts.join(',');
+}
 /* 굳힌 뒤, 글자가 자기 상자보다 넓게 그려지는지 실측한다.
    폰트가 측정 이후에 뒤늦게 도착하면 상자는 좁은 채로 남고 글자만 넓어져 겹친다.
    = 저장본이 뭉치는 증상 그 자체이므로, 이 비율로 직접 판정한다. */
@@ -1922,13 +1948,14 @@ async function ensureFontsReady(){
       if(allReady)break;
       await new Promise(r=>setTimeout(r,150));
     }
-    // 렌더 안정화: 레이아웃이 두 프레임 연속 동일할 때까지
-    let last=-1;
-    for(let i=0;i<8;i++){
+    // 렌더 안정화: 폰트 교체가 끝나 레이아웃이 두 번 연속 동일할 때까지.
+    // ⚠ 높이만 보면 안 된다. 줄 수가 그대로면 폰트가 바뀌어도 높이는 변하지 않는다.
+    let last='',stable=0;
+    for(let i=0;i<40;i++){
       await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
-      const h=Math.round(flow.getBoundingClientRect().height*10);
-      if(h===last)break;
-      last=h;
+      const fp=layoutFingerprint();
+      if(fp===last){if(++stable>=2)break;}else{stable=0;last=fp;}
+      if(i>=6)await new Promise(r=>setTimeout(r,100));
     }
   }catch(_){}
 }
@@ -1971,7 +1998,7 @@ $('#exportBtn').addEventListener('click',async()=>{
     }
     // 줄바꿈 + 글자 진행폭을 한 번에 고정한다.
     // (줄바꿈을 먼저 넣으면 그 순간 양끝정렬이 풀려 그 상태가 굳어버린다)
-    let glyphFrozen=false;
+    let glyphFrozen=false,lastOverflow=0;
     const preFreezeHTML=$('#content').innerHTML;
     const preFreezeH=flow.getBoundingClientRect().height;
     // 줄 끝 공백은 의도적으로 버리므로 공백을 모두 뺀 상태로 대조한다
@@ -1983,7 +2010,7 @@ $('#exportBtn').addEventListener('click',async()=>{
       flow.style.letterSpacing=savedLS2;flow.style.wordSpacing=savedWS2;
       await new Promise(r=>requestAnimationFrame(r));
     };
-    for(let attempt=0;attempt<2;attempt++){
+    for(let attempt=0;attempt<3;attempt++){
       try{
         glyphFrozen=freezeTextLayout();
         if(glyphFrozen){
@@ -1995,12 +2022,13 @@ $('#exportBtn').addEventListener('click',async()=>{
         }
       }catch(e){console.warn('freezeTextLayout',e);glyphFrozen=false;}
       if(!glyphFrozen)break;
-      // 글자가 상자보다 넓으면 폰트가 측정 뒤에 도착한 것 → 다시 기다렸다 한 번만 재시도
-      if(glyphOverflowRatio()<=0.15)break;
-      if(attempt===1)break;
+      // 글자가 상자보다 넓으면 폰트가 측정 뒤에 도착한 것 → 다시 기다렸다 재시도
+      lastOverflow=glyphOverflowRatio();
+      if(lastOverflow<=0.15)break;
+      if(attempt===2)break;
       await restoreFreeze();
       await ensureFontsReady();
-      await new Promise(r=>setTimeout(r,300));
+      await new Promise(r=>setTimeout(r,400));
     }
     if(!glyphFrozen){
       // 원복 후 기존 방식(줄바꿈만 고정)으로 폴백
@@ -2008,6 +2036,9 @@ $('#exportBtn').addEventListener('click',async()=>{
       freezeLineBreaks();
       await new Promise(r=>requestAnimationFrame(r));
     }
+    // 진단: 정밀맞춤이 안 걸렸으면 알려준다(뭉침 제보 시 원인 구분용)
+    exportDiag={frozen:glyphFrozen,overflow:+lastOverflow.toFixed(3)};
+    console.log('[발췌기] 정밀맞춤',exportDiag);
     const W=canvasEl.offsetWidth,H=canvasEl.offsetHeight;
     const canvas=await html2canvas(canvasEl,{
       scale:+$('#scale').value,
@@ -2041,6 +2072,9 @@ $('#exportBtn').addEventListener('click',async()=>{
       }
     });
     const a=document.createElement('a');a.download='발췌_'+Date.now()+'.png';a.href=canvas.toDataURL('image/png');a.click();
+    if(exportDiag&&(!exportDiag.frozen||exportDiag.overflow>0.15)&&typeof toast==='function'){
+      toast('저장됨 · 글자 정밀맞춤 실패('+(exportDiag.frozen?'넘침 '+Math.round(exportDiag.overflow*100)+'%':'미적용')+') — 글자가 뭉쳤다면 이 문구를 알려주세요','err');
+    }
   }catch(err){console.error('export',err);if(typeof toast==='function')toast('저장 실패 · '+(typeof kkExplainErr==='function'?kkExplainErr(err):err.message),'err');}
   finally{
     // 형광펜 분할 원상복구
