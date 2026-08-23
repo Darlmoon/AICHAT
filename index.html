@@ -639,7 +639,7 @@ body.ui-dark .kk-root .toggle-row label{color:#ccc;}
     <button class="on">💬 카톡</button>
   </div>
   <span style="flex:1"></span>
-  <span style="font-size:9px;color:var(--ink-faint);opacity:.7;">v6.0823-1309</span>
+  <span style="font-size:9px;color:var(--ink-faint);opacity:.7;">v6.0823-1402</span>
   <span id="autosave-ind" style="font-size:10px;color:var(--ink-faint);">자동 저장 대기</span>
   <button class="btn" style="padding:4px 8px;" id="btn-undo" onclick="undo()" title="실행취소 (Ctrl+Z)">↶</button>
   <button class="btn" style="padding:4px 8px;" id="btn-redo" onclick="redo()" title="다시실행 (Ctrl+Shift+Z)">↷</button>
@@ -1135,12 +1135,38 @@ let buildTimer=null;
 $('#src').addEventListener('input',()=>{if(!autoApply)return;clearTimeout(buildTimer);buildTimer=setTimeout(buildFromMarkup,180);});
 function hasManualFormatting(){return !!flow.querySelector('.hl-mark, strong, em, u, span[style*="color"], span[style*="font-size"]');}
 $('#applyBtn').addEventListener('click',()=>{
+  setTimeout(warmFonts,0);
   if(hasManualFormatting()&&!confirm('적용하면 드래그로 준 형광펜·굵기 등 수동 서식이 사라지고 마크업 기준으로 다시 그려집니다. 계속할까요? (Ctrl+Z로 되돌릴 수 있어요)'))return;
   pushHistory();buildFromMarkup();
   const b=$('#applyBtn');const t=b.textContent;b.textContent='✓ 반영됨';setTimeout(()=>b.textContent=t,900);
 });
 flow.setAttribute('contenteditable','true');flow.style.userSelect='text';
 
+/* 폰트 예열: 저장 순간에 폰트를 받으려 하면 늘 경합이 난다.
+   글꼴이나 내용이 바뀌면 그 자리에서 미리 받아둬, 저장할 땐 이미 준비돼 있게 한다. */
+let warmTimer=null;
+function warmFonts(){
+  clearTimeout(warmTimer);
+  warmTimer=setTimeout(()=>{
+    try{
+      if(!document.fonts||!flow)return;
+      const fams=new Set();
+      String(state.font||'').split(',').forEach(x=>{
+        const n=x.trim().replace(/^['"]|['"]$/g,'');
+        if(n&&!/^(sans-serif|serif|cursive|monospace|system-ui|-apple-system|BlinkMacSystemFont)$/i.test(n))fams.add(n);
+      });
+      const text=Array.from(new Set(Array.from(flow.textContent||''))).join('').slice(0,900);
+      if(!text)return;
+      fams.forEach(fam=>{
+        ['300','400','500','700','800'].forEach(w=>{
+          ['normal','italic'].forEach(st=>{
+            try{document.fonts.load(`${st} ${w} 16px "${fam}"`,text);}catch(_){}
+          });
+        });
+      });
+    }catch(_){}
+  },400);
+}
 function applyTextStyles(){flow.style.setProperty('--pad',state.pad+'px');flow.style.setProperty('--pgap',state.paraGap+'px');flow.style.fontSize=state.fSize+'px';flow.style.lineHeight=state.lh;flow.style.letterSpacing=state.ls/100+'em';flow.style.fontFamily=state.font;flow.style.textAlign=state.hAlign;flow.style.wordBreak=state.wordBreak;flow.style.overflowWrap=(state.wordBreak==='break-all'?'anywhere':'break-word');flow.classList.toggle('narr-italic',state.narrItalic);flow.classList.toggle('dia-bold',state.diaBold);
   // 색은 CSS 변수로 지정 → 드래그로 넣은 자식 span의 색(style.color)이 우선하도록
   flow.style.setProperty('--c-narr',state.cNarr);
@@ -1622,7 +1648,7 @@ $('#creditChar').addEventListener('input',e=>{state.creditChar=e.target.value;re
 $('#creditSep').addEventListener('input',e=>{state.creditSep=e.target.value;renderCredit();});
 bindRange('creditSize',()=>{state.creditSize=+$('#creditSize').value;$('#creditSizeV').textContent=state.creditSize;renderCredit();});
 $('#creditAlignSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$$('#creditAlignSeg button').forEach(x=>x.classList.remove('on'));b.classList.add('on');state.creditAlign=b.dataset.ca;renderCredit();});
-$('#font').addEventListener('change',e=>{state.font=e.target.value;applyTextStyles();});
+$('#font').addEventListener('change',e=>{state.font=e.target.value;applyTextStyles();warmFonts();});
 function setRatio(r){
   state.ratio=r;
   // sync chip highlight: match either orientation of the base chip
@@ -1998,7 +2024,10 @@ $('#exportBtn').addEventListener('click',async()=>{
     }
     // 줄바꿈 + 글자 진행폭을 한 번에 고정한다.
     // (줄바꿈을 먼저 넣으면 그 순간 양끝정렬이 풀려 그 상태가 굳어버린다)
-    let glyphFrozen=false,lastOverflow=0;
+    let glyphFrozen=false,lastOverflow=0,fontArrived=false;
+    // 측정 이후에 폰트가 새로 도착하면 상자는 좁은 채 글자만 넓어진다. 그 순간을 직접 감지한다.
+    const onFontDone=()=>{fontArrived=true;};
+    try{document.fonts&&document.fonts.addEventListener('loadingdone',onFontDone);}catch(_){}
     const preFreezeHTML=$('#content').innerHTML;
     const preFreezeH=flow.getBoundingClientRect().height;
     // 줄 끝 공백은 의도적으로 버리므로 공백을 모두 뺀 상태로 대조한다
@@ -2011,6 +2040,7 @@ $('#exportBtn').addEventListener('click',async()=>{
       await new Promise(r=>requestAnimationFrame(r));
     };
     for(let attempt=0;attempt<3;attempt++){
+      fontArrived=false;
       try{
         glyphFrozen=freezeTextLayout();
         if(glyphFrozen){
@@ -2022,9 +2052,14 @@ $('#exportBtn').addEventListener('click',async()=>{
         }
       }catch(e){console.warn('freezeTextLayout',e);glyphFrozen=false;}
       if(!glyphFrozen)break;
-      // 글자가 상자보다 넓으면 폰트가 측정 뒤에 도착한 것 → 다시 기다렸다 재시도
+      // ⚠ 굳힌 직후 바로 재면 안 된다. 폰트가 아직 안 왔으면 상자도 글자도 똑같이 좁아
+      //   넘침이 0으로 나오고, 그 뒤에 폰트가 도착해 뭉친다.
+      //   폰트가 완전히 자리잡을 때까지 기다린 뒤에 잰다.
+      try{await document.fonts.ready;}catch(_){}
+      await new Promise(r=>setTimeout(r,250));
+      await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
       lastOverflow=glyphOverflowRatio();
-      if(lastOverflow<=0.15)break;
+      if(!fontArrived&&lastOverflow<=0.15)break;
       if(attempt===2)break;
       await restoreFreeze();
       await ensureFontsReady();
@@ -2037,7 +2072,8 @@ $('#exportBtn').addEventListener('click',async()=>{
       await new Promise(r=>requestAnimationFrame(r));
     }
     // 진단: 정밀맞춤이 안 걸렸으면 알려준다(뭉침 제보 시 원인 구분용)
-    exportDiag={frozen:glyphFrozen,overflow:+lastOverflow.toFixed(3)};
+    try{document.fonts&&document.fonts.removeEventListener('loadingdone',onFontDone);}catch(_){}
+    exportDiag={frozen:glyphFrozen,overflow:+lastOverflow.toFixed(3),lateFont:fontArrived};
     console.log('[발췌기] 정밀맞춤',exportDiag);
     const W=canvasEl.offsetWidth,H=canvasEl.offsetHeight;
     const canvas=await html2canvas(canvasEl,{
@@ -2072,8 +2108,8 @@ $('#exportBtn').addEventListener('click',async()=>{
       }
     });
     const a=document.createElement('a');a.download='발췌_'+Date.now()+'.png';a.href=canvas.toDataURL('image/png');a.click();
-    if(exportDiag&&(!exportDiag.frozen||exportDiag.overflow>0.15)&&typeof toast==='function'){
-      toast('저장됨 · 글자 정밀맞춤 실패('+(exportDiag.frozen?'넘침 '+Math.round(exportDiag.overflow*100)+'%':'미적용')+') — 글자가 뭉쳤다면 이 문구를 알려주세요','err');
+    if(exportDiag&&(!exportDiag.frozen||exportDiag.overflow>0.15||exportDiag.lateFont)&&typeof toast==='function'){
+      toast('저장됨 · 글자 정밀맞춤 실패('+(exportDiag.frozen?'넘침 '+Math.round(exportDiag.overflow*100)+'%':'미적용')+(exportDiag.lateFont?' /폰트지연':'')+') — 글자가 뭉쳤다면 이 문구를 알려주세요','err');
     }
   }catch(err){console.error('export',err);if(typeof toast==='function')toast('저장 실패 · '+(typeof kkExplainErr==='function'?kkExplainErr(err):err.message),'err');}
   finally{
@@ -2220,7 +2256,7 @@ function applyPreset(p){
   $('#creditSize').value=state.creditSize||9;$('#creditSizeV').textContent=state.creditSize||9;
   $$('#themePills button').forEach(b=>b.classList.toggle('on',b.dataset.t===state.theme));
   flow.classList.remove('v-top','v-mid','v-bot');flow.classList.add('v-'+state.vAlign);
-  applyCanvas();applyTextStyles();updateNotesStyle();renderCredit();
+  applyCanvas();applyTextStyles();updateNotesStyle();renderCredit();warmFonts();
 }
 $('#savePreset').addEventListener('click',()=>{
   const name=($('#presetName').value.trim())||('프리셋 '+(loadPresets().length+1));
@@ -2435,7 +2471,7 @@ $('#src').value=`@Che ci fai qui, piccola?
 "...Non dirmi che sei tu la guida temporanea."
 
 *그의 손이 비앙카의 어깨를 살짝 움켜쥐었다. 부드럽게, 그러나 분명한 힘이 실려 있었다.*`;
-applyTheme('dark');buildFromMarkup();applyCanvas();applyTextStyles();
+applyTheme('dark');buildFromMarkup();applyCanvas();applyTextStyles();warmFonts();
 $('#sw-htmlBg').style.background=state.htmlBgCustom;
 
 /* ===== KAKAO LOG MAKER SCRIPT ===== */
